@@ -1,0 +1,73 @@
+{
+  "matrix": {
+    "rows": 1000,
+    "serious": 300,
+    "deep": 240,
+    "hostile": 100,
+    "columns": [
+      "rank",
+      "sweep_stage",
+      "hostile_rank",
+      "title",
+      "year",
+      "venue",
+      "authors",
+      "doi",
+      "url",
+      "openalex_id",
+      "cited_by_count",
+      "query",
+      "relevance_score",
+      "problem_claimed",
+      "actual_mechanism",
+      "hidden_assumptions",
+      "variables_treated_as_fixed",
+      "failure_modes_ignored",
+      "what_it_makes_less_novel",
+      "what_it_leaves_open",
+      "abstract_excerpt"
+    ]
+  },
+  "experiments": {
+    "episodes": 4800,
+    "rows": 30,
+    "ratio4_scmp_success": 0.90625
+  },
+  "docs": {
+    "related_work_matrix.csv": {
+      "exists": true,
+      "bytes": 1507611
+    },
+    "literature_map.md": {
+      "exists": true,
+      "bytes": 51885
+    },
+    "hostile_prior_work.md": {
+      "exists": true,
+      "bytes": 101887
+    },
+    "novelty_boundary_map.md": {
+      "exists": true,
+      "bytes": 12891
+    },
+    "novelty_decision.md": {
+      "exists": true,
+      "bytes": 2310
+    },
+    "claims.md": {
+      "exists": true,
+      "bytes": 1571
+    },
+    "reviewer_attacks.md": {
+      "exists": true,
+      "bytes": 1863
+    },
+    "final_audit.md": {
+      "exists": true,
+      "bytes": 3280
+    }
+  },
+  "paper_main_exists": true,
+  "paper_pdf_exists": true,
+  "downloads_pdf_exists": true
+}
