@@ -40,3 +40,9 @@ EXIT pdflatex3: 0
 PDF copied to C:\Users\wangz\Downloads\23.pdf
 Build finished at 2026-06-11T18:51:41.5336309+01:00
 ```
+
+## Orchestrator Desktop Copy
+
+Checked: 2026-06-11 19:00:05 +01:00
+Downloads PDF: C:/Users/wangz/Downloads/23.pdf
+Result: copy script exit 0 log C:\Users\wangz\robotics_60_paper_batch\logs\desktop_copy_23_20260611_190001.log
