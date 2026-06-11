@@ -55,3 +55,7 @@ Recovery steps:
 - Regenerated synthesis docs from the valid matrix.
 - Patched `scripts/build_paper.ps1` and reran until all passes completed.
 - Published repository, regenerated final audit with URL, and pushed final metadata commit.
+
+Exit code: 0
+End time: 2026-06-11 19:00:01 +01:00
+PDF exists: True
