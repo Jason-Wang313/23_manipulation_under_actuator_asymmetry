@@ -22,7 +22,7 @@
 
 11. Exact Downloads PDF path: C:\Users\wangz\Downloads\23.pdf (present).
 
-12. GitHub URL/status: GitHub push not attempted yet.
+12. GitHub URL/status: https://github.com/Jason-Wang313/23_manipulation_under_actuator_asymmetry
 
 13. Visible Desktop PDF copy status: pending orchestrator copy
 

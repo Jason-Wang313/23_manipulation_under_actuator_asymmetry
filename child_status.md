@@ -1,6 +1,6 @@
 # Child Status
 
-Stage: PDF built, final audit pending
+Stage: complete, final metadata commit pending
 
 Current facts:
 - Wrote `plan.md`.
@@ -17,6 +17,9 @@ Current facts:
   - Captured LaTeX output so `Run-Step` returns only numeric exit code.
 - Final LaTeX build completed: pdflatex, bibtex, pdflatex, pdflatex all exited `0`.
 - Final PDF copied to `C:/Users/wangz/Downloads/23.pdf`.
+- Created public GitHub repo `https://github.com/Jason-Wang313/23_manipulation_under_actuator_asymmetry`.
+- Pushed initial commit `a85aed6` to `origin/master`.
+- Added `docs/github_status.md` and regenerated `docs/final_audit.md` with the GitHub URL.
 
 Commands run:
 - `apply_patch` add `plan.md`
@@ -34,6 +37,9 @@ Commands run:
 - `python scripts/fetch_iclr_template.py`; exit `0`
 - `python scripts/write_paper.py`; exit `0`
 - `powershell -ExecutionPolicy Bypass -File scripts/build_paper.ps1`; first attempts exposed script bugs, final run exit `0`
+- `python scripts/write_final_audit.py`; exit `0`
+- `gh repo create 23_manipulation_under_actuator_asymmetry --public --source . --remote origin --description "..."`
+- `git push -u origin master`; exit `0`
 
 Failures:
 - Literature refresh reported exit `-1` after several minutes without a normal completion message.
@@ -42,6 +48,7 @@ Failures:
 - Third build attempt produced `main.pdf` but skipped BibTeX/copy because function output polluted the return code.
 
 Recovery steps:
-- Validated `docs/related_work_matrix.csv`: 1000 rows, required columns, 100 hostile ranks.
+- Validated `docs/related_work_matrix.csv`: 1000 rows, required columns, 300 serious skim, 240 deep read, and 100 hostile ranks.
 - Regenerated synthesis docs from the valid matrix.
 - Patched `scripts/build_paper.ps1` and reran until all passes completed.
+- Published repository and regenerated final audit with URL.
