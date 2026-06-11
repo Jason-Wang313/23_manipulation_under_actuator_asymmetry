@@ -1,6 +1,6 @@
 # Child Status
 
-Stage: complete, final metadata commit pending
+Stage: complete and pushed
 
 Current facts:
 - Wrote `plan.md`.
@@ -20,6 +20,7 @@ Current facts:
 - Created public GitHub repo `https://github.com/Jason-Wang313/23_manipulation_under_actuator_asymmetry`.
 - Pushed initial commit `a85aed6` to `origin/master`.
 - Added `docs/github_status.md` and regenerated `docs/final_audit.md` with the GitHub URL.
+- Pushed final audit/status commit `7d24ef3` to `origin/master`.
 
 Commands run:
 - `apply_patch` add `plan.md`
@@ -40,6 +41,8 @@ Commands run:
 - `python scripts/write_final_audit.py`; exit `0`
 - `gh repo create 23_manipulation_under_actuator_asymmetry --public --source . --remote origin --description "..."`
 - `git push -u origin master`; exit `0`
+- `git commit -m "Record published audit status"`; exit `0`
+- `git push`; exit `0`
 
 Failures:
 - Literature refresh reported exit `-1` after several minutes without a normal completion message.
@@ -51,4 +54,4 @@ Recovery steps:
 - Validated `docs/related_work_matrix.csv`: 1000 rows, required columns, 300 serious skim, 240 deep read, and 100 hostile ranks.
 - Regenerated synthesis docs from the valid matrix.
 - Patched `scripts/build_paper.ps1` and reran until all passes completed.
-- Published repository and regenerated final audit with URL.
+- Published repository, regenerated final audit with URL, and pushed final metadata commit.
