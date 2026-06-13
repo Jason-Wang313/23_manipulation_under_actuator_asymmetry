@@ -326,16 +326,18 @@ def run_episode(
     method: str,
     ratio: float,
     seed: int,
+    estimated_ratio: Optional[float] = None,
     max_steps: int = 58,
     dt: float = 0.080,
 ) -> Dict[str, float]:
     rng = np.random.default_rng(seed)
     arm = Arm2D()
-    profile = ActuatorProfile.from_ratio(ratio)
+    true_profile = ActuatorProfile.from_ratio(ratio)
+    planning_profile = ActuatorProfile.from_ratio(ratio if estimated_ratio is None else estimated_ratio)
     xy, goal = _sample_reachable_pair(
         rng,
         arm,
-        profile=profile,
+        profile=true_profile,
         require_branch_contrast=ratio >= 1.5,
     )
     initial_error = float(np.linalg.norm(goal - xy))
@@ -350,21 +352,30 @@ def run_episode(
 
     for step in range(max_steps):
         previous = xy.copy()
-        out, v_des = choose_action(arm, profile, xy, goal, method, last_elbow)
+        out, v_des = choose_action(arm, planning_profile, xy, goal, method, last_elbow)
         if out.elbow != last_elbow:
             branch_switches += 1
         last_elbow = out.elbow
+        q_actual = arm.ik(xy, out.elbow)
+        if q_actual is None:
+            true_v_pred = np.zeros(2, dtype=float)
+            true_saturation_count = 0
+            true_effort = 0.0
+            true_margin = 0.0
+        else:
+            true_qdot, true_saturation_count, true_effort, true_margin = true_profile.apply(out.qcmd)
+            true_v_pred = arm.jacobian(q_actual) @ true_qdot
         # Quasi-static object motion: pusher velocity maps to object velocity with
         # small deterministic drag that is identical for all controllers.
-        v_actual = 0.94 * out.v_pred
+        v_actual = 0.94 * true_v_pred
         xy = xy + dt * v_actual
         if not arm.reachable(xy):
             xy = previous
         path_length += float(np.linalg.norm(xy - previous))
-        tracking_errors.append(float(np.linalg.norm(v_des - out.v_pred)))
-        saturation_total += int(out.saturation_count)
-        effort_total += float(out.effort)
-        margin_values.append(float(out.margin))
+        tracking_errors.append(float(np.linalg.norm(v_des - true_v_pred)))
+        saturation_total += int(true_saturation_count)
+        effort_total += float(true_effort)
+        margin_values.append(float(true_margin))
         if float(np.linalg.norm(goal - xy)) < 0.045:
             reached_step = step + 1
             break
@@ -373,6 +384,7 @@ def run_episode(
     return {
         "method": method,
         "ratio": float(ratio),
+        "estimated_ratio": float(ratio if estimated_ratio is None else estimated_ratio),
         "seed": int(seed),
         "initial_error": initial_error,
         "final_error": final_error,
@@ -411,6 +423,121 @@ def summarize(rows: Iterable[Dict[str, float]]) -> List[Dict[str, float]]:
     return out
 
 
+def summarize_by_estimated_ratio(rows: Iterable[Dict[str, float]]) -> List[Dict[str, float]]:
+    grouped: Dict[Tuple[str, float, float], List[Dict[str, float]]] = {}
+    for row in rows:
+        grouped.setdefault(
+            (str(row["method"]), float(row["ratio"]), float(row["estimated_ratio"])),
+            [],
+        ).append(row)
+    out: List[Dict[str, float]] = []
+    for (method, true_ratio, estimated_ratio), items in sorted(
+        grouped.items(), key=lambda item: (item[0][2], item[0][0])
+    ):
+        out.append(
+            {
+                "method": method,
+                "true_ratio": true_ratio,
+                "estimated_ratio": estimated_ratio,
+                "episodes": float(len(items)),
+                "success_rate": float(np.mean([x["success"] for x in items])),
+                "final_error_mean": float(np.mean([x["final_error"] for x in items])),
+                "final_error_std": float(np.std([x["final_error"] for x in items])),
+                "tracking_error_mean": float(np.mean([x["mean_tracking_error"] for x in items])),
+                "saturations_mean": float(np.mean([x["saturations"] for x in items])),
+                "effort_mean": float(np.mean([x["effort"] for x in items])),
+                "margin_mean": float(np.mean([x["mean_margin"] for x in items])),
+                "branch_switches_mean": float(np.mean([x["branch_switches"] for x in items])),
+            }
+        )
+    return out
+
+
+def run_calibration_stress(
+    output_dir: Path,
+    episodes: int = 160,
+    true_ratio: float = 4.0,
+    estimated_ratios: Iterable[float] = (4.0, 3.0, 2.0, 1.5, 1.0),
+    base_seed: int = 83000,
+) -> List[Dict[str, float]]:
+    rows: List[Dict[str, float]] = []
+    for estimated_ratio in estimated_ratios:
+        for method in METHODS:
+            for ep in range(episodes):
+                seed = base_seed + ep
+                rows.append(
+                    run_episode(
+                        method=method,
+                        ratio=true_ratio,
+                        estimated_ratio=estimated_ratio,
+                        seed=seed,
+                    )
+                )
+
+    episode_fields = [
+        "method",
+        "ratio",
+        "estimated_ratio",
+        "seed",
+        "initial_error",
+        "final_error",
+        "success",
+        "steps",
+        "path_length",
+        "mean_tracking_error",
+        "saturations",
+        "effort",
+        "mean_margin",
+        "branch_switches",
+    ]
+    with (output_dir / "calibration_stress_episodes.csv").open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=episode_fields)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    summary_rows = summarize_by_estimated_ratio(rows)
+    summary_fields = [
+        "method",
+        "true_ratio",
+        "estimated_ratio",
+        "episodes",
+        "success_rate",
+        "final_error_mean",
+        "final_error_std",
+        "tracking_error_mean",
+        "saturations_mean",
+        "effort_mean",
+        "margin_mean",
+        "branch_switches_mean",
+    ]
+    with (output_dir / "calibration_stress_summary.csv").open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=summary_fields)
+        writer.writeheader()
+        writer.writerows(summary_rows)
+    write_calibration_stress_table(summary_rows, output_dir / "calibration_stress_table.tex")
+    return summary_rows
+
+
+def write_calibration_stress_table(summary_rows: List[Dict[str, float]], path: Path) -> None:
+    index = {(row["method"], row["estimated_ratio"]): row for row in summary_rows}
+    lines = [
+        "\\begin{tabular}{lrrrr}",
+        "\\toprule",
+        "Estimated ratio & SCMP & Signed fixed & Sym. derating & Mean gain \\\\",
+        "\\midrule",
+    ]
+    for estimated_ratio in sorted({row["estimated_ratio"] for row in summary_rows}, reverse=True):
+        lines.append(
+            f"{estimated_ratio:.1f} & "
+            f"{index[('signed_cone_policy', estimated_ratio)]['success_rate']:.3f} & "
+            f"{index[('signed_fixed', estimated_ratio)]['success_rate']:.3f} & "
+            f"{index[('symmetric_derating', estimated_ratio)]['success_rate']:.3f} & "
+            f"{index[('mean_gain', estimated_ratio)]['success_rate']:.3f} \\\\"
+        )
+    lines.extend(["\\bottomrule", "\\end{tabular}", ""])
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
 def run_suite(
     output_dir: Path,
     episodes: int = 160,
@@ -433,6 +560,7 @@ def run_suite(
     fieldnames = [
         "method",
         "ratio",
+        "estimated_ratio",
         "seed",
         "initial_error",
         "final_error",
@@ -470,7 +598,15 @@ def run_suite(
         writer.writeheader()
         writer.writerows(summary_rows)
 
-    payload = {"episodes": len(rows), "summary": summary_rows, "methods": METHODS}
+    calibration_stress_rows = run_calibration_stress(output_dir=output_dir, episodes=episodes)
+    write_calibration_plot(calibration_stress_rows, output_dir)
+
+    payload = {
+        "episodes": len(rows),
+        "summary": summary_rows,
+        "calibration_stress": calibration_stress_rows,
+        "methods": METHODS,
+    }
     with (output_dir / "summary.json").open("w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
     write_latex_table(summary_rows, output_dir / "result_table.tex")
@@ -551,4 +687,46 @@ def write_plots(summary_rows: List[Dict[str, float]], output_dir: Path) -> None:
     axes[1].legend(loc="upper left", bbox_to_anchor=(1.02, 1.0), frameon=False, fontsize=7)
     fig.tight_layout()
     fig.savefig(output_dir / "success_error_by_ratio.png", bbox_inches="tight")
+    plt.close(fig)
+
+
+def write_calibration_plot(summary_rows: List[Dict[str, float]], output_dir: Path) -> None:
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception as exc:
+        (output_dir / "calibration_plot_status.txt").write_text(f"matplotlib unavailable: {exc}\n", encoding="utf-8")
+        return
+
+    labels = {
+        "mean_gain": "mean gain",
+        "symmetric_derating": "sym derating",
+        "signed_fixed": "signed fixed",
+        "signed_cone_policy": "signed cone policy",
+    }
+    colors = {
+        "mean_gain": "#b8874f",
+        "symmetric_derating": "#7b6aa8",
+        "signed_fixed": "#4b9a73",
+        "signed_cone_policy": "#c9453f",
+    }
+    fig, ax = plt.subplots(figsize=(5.2, 3.0), dpi=180)
+    for method in labels:
+        rows = sorted([r for r in summary_rows if r["method"] == method], key=lambda r: r["estimated_ratio"])
+        ax.plot(
+            [r["estimated_ratio"] for r in rows],
+            [r["success_rate"] for r in rows],
+            marker="o",
+            label=labels[method],
+            color=colors[method],
+        )
+    ax.set_xlabel("estimated asymmetry ratio")
+    ax.set_ylabel("success rate")
+    ax.set_ylim(-0.03, 1.03)
+    ax.grid(True, alpha=0.25)
+    ax.legend(frameon=False, fontsize=7)
+    fig.tight_layout()
+    fig.savefig(output_dir / "calibration_stress.png", bbox_inches="tight")
     plt.close(fig)

@@ -1,6 +1,6 @@
 # Child Status
 
-Stage: complete and pushed
+Stage: v2 submission hardening complete
 
 Current facts:
 - Wrote `plan.md`.
@@ -21,6 +21,8 @@ Current facts:
 - Pushed initial commit `a85aed6` to `origin/master`.
 - Added `docs/github_status.md` and regenerated `docs/final_audit.md` with the GitHub URL.
 - Pushed final audit/status commit `7d24ef3` to `origin/master`.
+- V2 hardening added calibration-error stress. With true ratio 4.0, SCMP reaches 0.863 success when calibrated correctly and falls to 0.281 when the policy assumes symmetry.
+- Updated `scripts/write_paper.py`, `scripts/write_final_audit.py`, and `scripts/validate_artifacts.py` so v2 results survive regeneration.
 
 Commands run:
 - `apply_patch` add `plan.md`
@@ -59,3 +61,10 @@ Recovery steps:
 Exit code: 0
 End time: 2026-06-11 19:00:01 +01:00
 PDF exists: True
+
+## V2 Hardening Complete
+
+- Rebuilt paper with the calibration-stress table.
+- Copied `C:/Users/wangz/Downloads/23.pdf`.
+- Removed local `paper/main.pdf`.
+- Prepared v2 commit and push.

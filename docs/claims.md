@@ -7,6 +7,7 @@
 ## Supported by Runnable Evidence
 1. In the provided planar manipulation proxy, actuator asymmetry causes nominal and mean-gain policies to saturate or accumulate directional tracking error as the asymmetry ratio grows.
 2. Selecting primitives with signed-cone projected error and margin improves success and final error relative to fixed-branch and symmetric derating baselines in the simulator.
+3. V2 calibration stress shows the method depends on calibrated signed authority: with true ratio 4.0, SCMP reaches 0.863 success under correct calibration but falls to 0.281 when it plans as if the actuator were symmetric.
 
 ## Plausible but Not Fully Proven
 1. The same mechanism should help real contact-rich manipulation where IK branch, grasp side, or contact mode choices induce different signed actuator demands.
@@ -17,3 +18,4 @@
 2. No claim that SCMP solves unknown or rapidly time-varying actuator faults without identification.
 3. No claim that the simple simulator is a benchmark for the field.
 4. No claim that the method dominates full constrained MPC on all tasks.
+5. No claim of robustness to badly misestimated signed cones.

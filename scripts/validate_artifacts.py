@@ -43,14 +43,33 @@ def matrix_stats() -> dict:
 def experiment_stats() -> dict:
     path = RESULTS / "summary.json"
     if not path.exists():
-        return {"episodes": 0, "rows": 0, "ratio4_scmp_success": None}
+        return {
+            "episodes": 0,
+            "rows": 0,
+            "ratio4_scmp_success": None,
+            "calibration_stress_rows": 0,
+            "calibration_ratio1_scmp_success": None,
+        }
     payload = json.loads(path.read_text(encoding="utf-8"))
     rows = payload.get("summary", [])
+    calibration_rows = payload.get("calibration_stress", [])
     ratio4 = None
     for row in rows:
         if row.get("method") == "signed_cone_policy" and abs(float(row.get("ratio", 0.0)) - 4.0) < 1e-9:
             ratio4 = row.get("success_rate")
-    return {"episodes": payload.get("episodes", 0), "rows": len(rows), "ratio4_scmp_success": ratio4}
+    calibration_ratio1 = None
+    for row in calibration_rows:
+        if row.get("method") == "signed_cone_policy" and abs(float(row.get("estimated_ratio", 0.0)) - 1.0) < 1e-9:
+            calibration_ratio1 = row.get("success_rate")
+    return {
+        "episodes": payload.get("episodes", 0),
+        "rows": len(rows),
+        "ratio4_scmp_success": ratio4,
+        "calibration_stress_rows": len(calibration_rows),
+        "calibration_ratio1_scmp_success": calibration_ratio1,
+        "calibration_stress_table_exists": (RESULTS / "calibration_stress_table.tex").exists(),
+        "calibration_stress_plot_exists": (RESULTS / "calibration_stress.png").exists(),
+    }
 
 
 def main() -> int:

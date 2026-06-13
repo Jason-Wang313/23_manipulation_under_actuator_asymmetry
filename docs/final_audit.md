@@ -14,21 +14,23 @@
 
 7. Proof/formal-claim status: Two local propositions are argued in the paper. The fixed-primitive projection claim is a convex projection statement. The symmetric-derating loss claim is an existence/counterexample statement. No global optimality, real-robot theorem, or unknown-fault identification guarantee is claimed.
 
-8. Strongest evidence: At asymmetry ratio 4.0, SCMP reached success 0.906 and final error 0.055; nominal branch reached success 0.500 and final error 0.100; signed fixed branch reached success 0.613 and final error 0.092.
+8. Strongest evidence: At asymmetry ratio 4.0, SCMP reached success 0.906 and final error 0.055; nominal branch reached success 0.500 and final error 0.100; signed fixed branch reached success 0.613 and final error 0.092. V2 calibration stress with true ratio 4.0: SCMP success 0.863 under correct calibration versus 0.844 for mean-gain compensation; when the policy assumes symmetry, SCMP falls to 0.281.
 
-9. Biggest weaknesses: The evidence is a simplified two-link manipulation proxy; no hardware validation; actuator asymmetry is assumed known; primitive switching is local and not globally planned; full signed-bound MPC is not implemented as a strongest possible baseline.
+9. Biggest weaknesses: The evidence is a simplified two-link manipulation proxy; no hardware validation; actuator asymmetry is assumed known; v2 shows SCMP collapses when the signed cone is badly miscalibrated; primitive switching is local and not globally planned; full signed-bound MPC is not implemented as a strongest possible baseline.
 
-10. Paper-readiness judgment: workshop. The mechanism is crisp and runnable, but a main-conference submission would need real-robot or higher-fidelity evidence and a stronger constrained-MPC comparison.
+10. Paper-readiness judgment: workshop-only / strong-revise. The mechanism is crisp and runnable, but a main-conference submission would need real-robot or higher-fidelity evidence, online calibration, and a stronger constrained-MPC comparison.
 
-11. Exact Downloads PDF path: C:\Users\wangz\Downloads\23.pdf (present).
+11. Exact Downloads PDF path: C:\Users\wangz\Downloads\23.pdf (present, 281093 bytes).
 
 12. GitHub URL/status: https://github.com/Jason-Wang313/23_manipulation_under_actuator_asymmetry
 
-13. Visible Desktop PDF copy status: pending orchestrator copy
+13. Visible Desktop PDF copy status: absent under v2 hardening
+
+14. Local build PDF status: `paper/main.pdf` is absent after canonical copy.
 
 ## Build Status Excerpt
 ```
-Build started at 2026-06-11T18:51:32.4660155+01:00
+Build started at 2026-06-13T03:25:47.4866866+01:00
 RUN pdflatex1: pdflatex -interaction=nonstopmode -halt-on-error main.tex
 EXIT pdflatex1: 0
 RUN bibtex: bibtex main
@@ -38,11 +40,5 @@ EXIT pdflatex2: 0
 RUN pdflatex3: pdflatex -interaction=nonstopmode -halt-on-error main.tex
 EXIT pdflatex3: 0
 PDF copied to C:\Users\wangz\Downloads\23.pdf
-Build finished at 2026-06-11T18:51:41.5336309+01:00
+Build finished at 2026-06-13T03:26:09.8095065+01:00
 ```
-
-## Orchestrator Desktop Copy
-
-Checked: 2026-06-11 19:00:05 +01:00
-Downloads PDF: C:/Users/wangz/Downloads/23.pdf
-Result: copy script exit 0 log C:\Users\wangz\robotics_60_paper_batch\logs\desktop_copy_23_20260611_190001.log
