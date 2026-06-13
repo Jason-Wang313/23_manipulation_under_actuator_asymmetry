@@ -13,7 +13,7 @@ Response: it might, if the randomized support includes sign asymmetry and enough
 Response: accepted. The simulator is evidence for the broken assumption and mechanism, not a claim of real-robot readiness. The final audit should mark the paper as revise/workshop unless stronger physical validation is added.
 
 ## Attack 5: The method requires known actuator asymmetry.
-Response: yes. Identification is left open. The paper can use calibration or telemetry, and should not claim robustness to unknown asymmetry.
+Response: yes. V2 adds a calibration stress: with true ratio 4.0, SCMP reaches 0.863 success when calibrated correctly but falls to 0.281 when it assumes symmetry. Identification is left open, and the paper does not claim robustness to unknown asymmetry.
 
 ## Attack 6: Switching IK/contact primitives may be discontinuous.
 Response: the implementation includes a switch penalty, but smooth transition planning is not solved. The contribution is local policy structure; global transition feasibility is future work.

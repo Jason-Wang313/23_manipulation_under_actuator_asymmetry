@@ -155,6 +155,13 @@ def metric(summary_rows: List[Dict[str, object]], method: str, ratio: float, fie
     return "n/a"
 
 
+def calibration_metric(summary_rows: List[Dict[str, object]], method: str, estimated_ratio: float, field: str) -> str:
+    for row in summary_rows:
+        if row.get("method") == method and abs(float(row.get("estimated_ratio", 0.0)) - estimated_ratio) < 1e-6:
+            return f"{float(row.get(field, 0.0)):.3f}"
+    return "n/a"
+
+
 def copy_result_assets() -> None:
     table = RESULTS / "result_table.tex"
     if table.exists():
@@ -162,6 +169,12 @@ def copy_result_assets() -> None:
     plot = RESULTS / "success_error_by_ratio.png"
     if plot.exists():
         shutil.copyfile(plot, PAPER / "success_error_by_ratio.png")
+    calibration_table = RESULTS / "calibration_stress_table.tex"
+    if calibration_table.exists():
+        shutil.copyfile(calibration_table, PAPER / "calibration_stress_table.tex")
+    calibration_plot = RESULTS / "calibration_stress.png"
+    if calibration_plot.exists():
+        shutil.copyfile(calibration_plot, PAPER / "calibration_stress.png")
 
 
 def write_bib(picks: Dict[str, Dict[str, str]]) -> None:
@@ -182,11 +195,15 @@ def write_bib(picks: Dict[str, Dict[str, str]]) -> None:
 
 def write_main(picks: Dict[str, Dict[str, str]], summary: Dict[str, object]) -> None:
     summary_rows = list(summary.get("summary", []))
+    calibration_rows = list(summary.get("calibration_stress", []))
     episodes = int(summary.get("episodes", 0) or 0)
     success_nominal = metric(summary_rows, "nominal_branch", 4.0, "success_rate")
     success_scmp = metric(summary_rows, "signed_cone_policy", 4.0, "success_rate")
     err_nominal = metric(summary_rows, "nominal_branch", 4.0, "final_error_mean")
     err_scmp = metric(summary_rows, "signed_cone_policy", 4.0, "final_error_mean")
+    calib_exact_scmp = calibration_metric(calibration_rows, "signed_cone_policy", 4.0, "success_rate")
+    calib_exact_mean = calibration_metric(calibration_rows, "mean_gain", 4.0, "success_rate")
+    calib_symmetric_scmp = calibration_metric(calibration_rows, "signed_cone_policy", 1.0, "success_rate")
     cite = lambda key: key if key in picks else next(iter(picks.keys()), "openalex")
 
     tex = r"""
@@ -209,8 +226,11 @@ def write_main(picks: Dict[str, Dict[str, str]], summary: Dict[str, object]) -> 
 \begin{{document}}
 \maketitle
 
+\paragraph{{Submission-hardening version: v2.}}
+This revision adds a calibration-error stress test for the known-asymmetry assumption. With true asymmetry ratio 4.0, SCMP reaches {calib_exact_scmp} success when the signed cone is correctly calibrated, but falls to {calib_symmetric_scmp} when the policy incorrectly assumes a symmetric actuator ratio of 1.0.
+
 \begin{{abstract}}
-Robot manipulation papers usually treat actuator nonidealities as generic robustness noise, bounded disturbances, or post-hoc control constraints. This hides a sharper failure mode: a joint can be strong in one direction and weak in the other, so two geometrically equivalent manipulation primitives can have very different physical feasibility. We study actuator asymmetry as a policy-structure problem. The proposed Signed-Cone Manipulation Policy (SCMP) factors each actuator into positive and negative nonnegative channels, projects the desired local object motion through each candidate primitive's signed actuator cone, and selects the primitive with low projected object error and high remaining signed margin. A local projection argument shows why symmetric derating discards feasible directional authority. In a reproducible two-link planar manipulation proxy with {episodes} episodes, SCMP improves the high-asymmetry success rate from {success_nominal} for a nominal branch policy to {success_scmp}, and reduces mean final error from {err_nominal} to {err_scmp}. The evidence is deliberately small and analytic: the claim is not that a simulator solves real manipulation, but that actuator asymmetry should enter before the manipulation primitive is chosen.
+Robot manipulation papers usually treat actuator nonidealities as generic robustness noise, bounded disturbances, or post-hoc control constraints. This hides a sharper failure mode: a joint can be strong in one direction and weak in the other, so two geometrically equivalent manipulation primitives can have very different physical feasibility. We study actuator asymmetry as a policy-structure problem. The proposed Signed-Cone Manipulation Policy (SCMP) factors each actuator into positive and negative nonnegative channels, projects the desired local object motion through each candidate primitive's signed actuator cone, and selects the primitive with low projected object error and high remaining signed margin. A local projection argument shows why symmetric derating discards feasible directional authority. In a reproducible two-link planar manipulation proxy with {episodes} episodes, SCMP improves the high-asymmetry success rate from {success_nominal} for a nominal branch policy to {success_scmp}, and reduces mean final error from {err_nominal} to {err_scmp}. A v2 calibration stress narrows the claim: when the true ratio is 4.0, SCMP reaches {calib_exact_scmp} success with correct calibration but only {calib_symmetric_scmp} when it plans as if the actuator were symmetric. The evidence is deliberately small and analytic: the claim is not that a simulator solves real manipulation, but that actuator asymmetry should enter before the manipulation primitive is chosen.
 \end{{abstract}}
 
 \section{{Introduction}}
@@ -287,8 +307,18 @@ We compare six controllers: nominal fixed branch, nominal branch selection by jo
 
 Table~\ref{{tab:main}} and Figure~\ref{{fig:ratio}} show the expected pattern. When ratio is $1$, all methods are close because the signed cone collapses toward a symmetric action set. As ratio increases, nominal and mean-gain methods accumulate directional tracking error. Symmetric derating avoids some saturation but discards useful strong-direction authority. Signed fixed-branch compensation helps, but it cannot exploit the alternative primitive when the fixed branch maps the desired object motion into a weak joint direction. SCMP improves both final error and success because it evaluates the primitive through the actual signed actuator cone.
 
+\paragraph{{V2 calibration stress.}}
+The main experiment assumes the signed actuator profile is known. To attack that assumption, we fix the true asymmetry ratio at 4.0 and rerun paired tasks while the policy plans with estimated ratios from 4.0 down to 1.0. Table~\ref{{tab:calibration}} shows that SCMP remains useful under moderate underestimation, but it is not robust to missing the asymmetry entirely: at estimated ratio 1.0, SCMP falls to {calib_symmetric_scmp} success. This is the central deployment boundary. The method needs calibrated signed authority or an online identification layer.
+
+\begin{{table}}[t]
+\centering
+\caption{{V2 calibration stress with true asymmetry ratio fixed at 4.0. Entries are success rates as the policy's estimated signed cone becomes increasingly wrong.}}
+\input{{calibration_stress_table.tex}}
+\label{{tab:calibration}}
+\end{{table}}
+
 \section{{Limitations}}
-The main limitation is external validity. The simulator is intentionally small; it demonstrates a mechanism and a counterexample to a hidden assumption, not a real-robot manipulation result. The method assumes calibrated sign-dependent gains and limits. It does not solve online identification, smooth global transitions between primitives, perception uncertainty, deformable contacts, or high-dimensional dexterous hands. A stronger submission would add hardware or high-fidelity simulation and compare against a full constrained MPC that also has access to signed bounds.
+The main limitation is external validity. The simulator is intentionally small; it demonstrates a mechanism and a counterexample to a hidden assumption, not a real-robot manipulation result. The method assumes calibrated sign-dependent gains and limits; the v2 calibration stress shows that the advantage can collapse when the signed cone is badly misestimated. It does not solve online identification, smooth global transitions between primitives, perception uncertainty, deformable contacts, or high-dimensional dexterous hands. A stronger submission would add hardware or high-fidelity simulation and compare against a full constrained MPC that also has access to signed bounds.
 
 \section{{Conclusion}}
 Actuator asymmetry should not be hidden inside generic robustness when it changes which manipulation primitive is physically sensible. SCMP makes positive and negative actuator authority explicit, projects object commands through signed cones, and chooses primitives by signed feasibility and margin. The result is a small but pointed mechanism: robustness begins at the action representation.
@@ -316,6 +346,9 @@ The repository includes the literature matrix and synthesis docs, simulator sour
         "{success_scmp}": success_scmp,
         "{err_nominal}": err_nominal,
         "{err_scmp}": err_scmp,
+        "{calib_exact_scmp}": calib_exact_scmp,
+        "{calib_exact_mean}": calib_exact_mean,
+        "{calib_symmetric_scmp}": calib_symmetric_scmp,
     }
     for old, new in {**citation_groups, **replacements}.items():
         tex = tex.replace(old, new)

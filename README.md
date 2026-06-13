@@ -37,5 +37,6 @@ C:/Users/wangz/Downloads/23.pdf
 - `docs/reviewer_attacks.md`: adversarial review risks.
 - `src/asym_manip/simulator.py`: signed-actuator manipulation simulator.
 - `results/summary.csv`: aggregate experiment results.
+- `results/calibration_stress_summary.csv`: v2 stress for misestimated signed actuator cones.
 - `paper/main.tex`: anonymous ICLR-style manuscript.
 - `docs/final_audit.md`: required final audit.

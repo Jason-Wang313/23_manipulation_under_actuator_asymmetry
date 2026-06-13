@@ -31,7 +31,11 @@
   "experiments": {
     "episodes": 4800,
     "rows": 30,
-    "ratio4_scmp_success": 0.90625
+    "ratio4_scmp_success": 0.90625,
+    "calibration_stress_rows": 30,
+    "calibration_ratio1_scmp_success": 0.28125,
+    "calibration_stress_table_exists": true,
+    "calibration_stress_plot_exists": true
   },
   "docs": {
     "related_work_matrix.csv": {
@@ -56,18 +60,18 @@
     },
     "claims.md": {
       "exists": true,
-      "bytes": 1571
+      "bytes": 1853
     },
     "reviewer_attacks.md": {
       "exists": true,
-      "bytes": 1863
+      "bytes": 1975
     },
     "final_audit.md": {
       "exists": true,
-      "bytes": 3323
+      "bytes": 3554
     }
   },
   "paper_main_exists": true,
-  "paper_pdf_exists": true,
+  "paper_pdf_exists": false,
   "downloads_pdf_exists": true
 }

@@ -46,6 +46,31 @@ def best_result_line() -> str:
     )
 
 
+def calibration_result_line() -> str:
+    path = RESULTS / "summary.json"
+    if not path.exists():
+        return "V2 calibration stress was not run."
+    data = json.loads(path.read_text(encoding="utf-8"))
+    rows = data.get("calibration_stress", [])
+
+    def get(method: str, estimated_ratio: float):
+        for row in rows:
+            if row.get("method") == method and abs(float(row.get("estimated_ratio", 0.0)) - estimated_ratio) < 1e-6:
+                return row
+        return {}
+
+    exact = get("signed_cone_policy", 4.0)
+    symmetric = get("signed_cone_policy", 1.0)
+    mean_exact = get("mean_gain", 4.0)
+    return (
+        "V2 calibration stress with true ratio 4.0: SCMP success "
+        f"{float(exact.get('success_rate', 0.0)):.3f} under correct calibration versus "
+        f"{float(mean_exact.get('success_rate', 0.0)):.3f} for mean-gain compensation; "
+        "when the policy assumes symmetry, SCMP falls to "
+        f"{float(symmetric.get('success_rate', 0.0)):.3f}."
+    )
+
+
 def read_optional(path: Path, default: str) -> str:
     if path.exists():
         return path.read_text(encoding="utf-8").strip()
@@ -56,8 +81,9 @@ def main() -> int:
     DOCS.mkdir(parents=True, exist_ok=True)
     github_status = read_optional(DOCS / "github_status.md", "GitHub push not attempted yet.")
     build_status = read_optional(PAPER / "build_status.txt", "Paper build not attempted yet.")
-    pdf_status = "present" if DOWNLOADS_PDF.exists() else "missing"
-    desktop_status = str(DESKTOP_PDF) if DESKTOP_PDF.exists() else "pending orchestrator copy"
+    pdf_status = f"present, {DOWNLOADS_PDF.stat().st_size} bytes" if DOWNLOADS_PDF.exists() else "missing"
+    local_pdf_status = "present" if (PAPER / "main.pdf").exists() else "absent after canonical copy"
+    desktop_status = str(DESKTOP_PDF) if DESKTOP_PDF.exists() else "absent under v2 hardening"
     matrix_count = count_matrix()
     audit = [
         "# Final Audit",
@@ -76,17 +102,19 @@ def main() -> int:
         "",
         "7. Proof/formal-claim status: Two local propositions are argued in the paper. The fixed-primitive projection claim is a convex projection statement. The symmetric-derating loss claim is an existence/counterexample statement. No global optimality, real-robot theorem, or unknown-fault identification guarantee is claimed.",
         "",
-        f"8. Strongest evidence: {best_result_line()}",
+        f"8. Strongest evidence: {best_result_line()} {calibration_result_line()}",
         "",
-        "9. Biggest weaknesses: The evidence is a simplified two-link manipulation proxy; no hardware validation; actuator asymmetry is assumed known; primitive switching is local and not globally planned; full signed-bound MPC is not implemented as a strongest possible baseline.",
+        "9. Biggest weaknesses: The evidence is a simplified two-link manipulation proxy; no hardware validation; actuator asymmetry is assumed known; v2 shows SCMP collapses when the signed cone is badly miscalibrated; primitive switching is local and not globally planned; full signed-bound MPC is not implemented as a strongest possible baseline.",
         "",
-        "10. Paper-readiness judgment: workshop. The mechanism is crisp and runnable, but a main-conference submission would need real-robot or higher-fidelity evidence and a stronger constrained-MPC comparison.",
+        "10. Paper-readiness judgment: workshop-only / strong-revise. The mechanism is crisp and runnable, but a main-conference submission would need real-robot or higher-fidelity evidence, online calibration, and a stronger constrained-MPC comparison.",
         "",
         f"11. Exact Downloads PDF path: {DOWNLOADS_PDF} ({pdf_status}).",
         "",
         f"12. GitHub URL/status: {github_status}",
         "",
         f"13. Visible Desktop PDF copy status: {desktop_status}",
+        "",
+        f"14. Local build PDF status: `paper/main.pdf` is {local_pdf_status}.",
         "",
         "## Build Status Excerpt",
         "```",
