@@ -1,0 +1,42 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Family G negative controls.}
+\label{tab:negative-controls}
+\begin{tabular}{lcccc}
+\toprule
+Control & Method & Success & Error & Track \\
+\midrule
+near\_singular & guarded\_scmp & 1.000 & 0.042 & 0.009 \\
+near\_singular & random\_branch & 0.983 & 0.044 & 0.109 \\
+near\_singular & scmp\_estimated & 1.000 & 0.042 & 0.014 \\
+near\_singular & scmp\_true & 1.000 & 0.042 & 0.016 \\
+near\_singular & symmetric\_derating & 0.733 & 0.058 & 0.183 \\
+no\_branch\_contrast & guarded\_scmp & 1.000 & 0.042 & 0.007 \\
+no\_branch\_contrast & random\_branch & 0.967 & 0.044 & 0.097 \\
+no\_branch\_contrast & scmp\_estimated & 1.000 & 0.042 & 0.009 \\
+no\_branch\_contrast & scmp\_true & 1.000 & 0.042 & 0.011 \\
+no\_branch\_contrast & symmetric\_derating & 0.983 & 0.043 & 0.157 \\
+random\_label\_control & guarded\_scmp & 0.883 & 0.061 & 0.060 \\
+random\_label\_control & random\_branch & 0.750 & 0.073 & 0.147 \\
+random\_label\_control & scmp\_estimated & 0.933 & 0.063 & 0.057 \\
+random\_label\_control & scmp\_true & 0.933 & 0.053 & 0.053 \\
+random\_label\_control & symmetric\_derating & 0.417 & 0.123 & 0.256 \\
+shared\_weak\_positive & guarded\_scmp & 0.517 & 0.103 & 0.204 \\
+shared\_weak\_positive & random\_branch & 0.633 & 0.098 & 0.174 \\
+shared\_weak\_positive & scmp\_estimated & 0.367 & 0.131 & 0.225 \\
+shared\_weak\_positive & scmp\_true & 0.950 & 0.055 & 0.040 \\
+shared\_weak\_positive & symmetric\_derating & 0.317 & 0.172 & 0.269 \\
+symmetric\_actuation & guarded\_scmp & 1.000 & 0.042 & 0.000 \\
+symmetric\_actuation & random\_branch & 1.000 & 0.042 & 0.008 \\
+symmetric\_actuation & scmp\_estimated & 1.000 & 0.042 & 0.000 \\
+symmetric\_actuation & scmp\_true & 0.967 & 0.056 & 0.000 \\
+symmetric\_actuation & symmetric\_derating & 0.983 & 0.050 & 0.000 \\
+wrong\_sign\_calibration & guarded\_scmp & 0.200 & 0.263 & 0.315 \\
+wrong\_sign\_calibration & random\_branch & 0.817 & 0.058 & 0.138 \\
+wrong\_sign\_calibration & scmp\_estimated & 0.150 & 0.156 & 0.272 \\
+wrong\_sign\_calibration & scmp\_true & 0.933 & 0.048 & 0.061 \\
+wrong\_sign\_calibration & symmetric\_derating & 0.150 & 0.298 & 0.325 \\
+\bottomrule
+\end{tabular}
+\end{table}

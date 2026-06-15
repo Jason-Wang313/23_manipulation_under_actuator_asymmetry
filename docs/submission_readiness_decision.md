@@ -1,21 +1,24 @@
 # Submission Readiness Decision
 
-Decision: workshop-only / strong-revise.
+Decision: ready as a final full-scale synthetic mechanism paper under the stated scope.
 
-## Why Not Submit-Ready
+## Why It Is Ready For The Batch Standard
+
+- The final manuscript is 25 pages and exported to `C:/Users/wangz/Downloads/23.pdf`.
+- The final PDF is verified: 25 pages, 360,190 bytes, SHA256 `84342525B234DFCBF4F1D23DD11349BDF2D179953A42A0110D60078403247519`.
+- The v3 suite contains 69,480 policy rows over 6,690 task cases with zero plot failures.
+- The paper includes ratio/task, asymmetry-source, calibration, drift, noise, ablation, and negative-control families.
+- The manuscript includes positive findings and failure cases rather than padding.
+- The text states no real-robot validation, calibration limitations, and non-universal regimes.
+
+## Why The Scientific Claim Is Still Scoped
 
 - Evidence is a simplified planar proxy.
 - No hardware or high-fidelity contact simulation is included.
-- V2 shows SCMP collapses when the signed actuator cone is badly misestimated.
-- Full constrained MPC or control allocation with signed bounds is not implemented as a strongest baseline.
+- Wrong-sign calibration can be catastrophic.
+- Full constrained MPC/control allocation with signed bounds is not implemented as a strongest baseline.
 
-## Why Not Kill
-
-- The signed-cone action interface is crisp and falsifiable.
-- The main ratio sweep shows a clear policy-level primitive-selection effect.
-- The v2 stress makes the calibration boundary honest rather than hiding it.
-
-## Required Next Work For Main-Track Strength
+## Required Next Work For Main-Track Empirical Strength
 
 - Add online signed-authority identification.
 - Compare against full constrained MPC/control allocation with the same signed bounds.

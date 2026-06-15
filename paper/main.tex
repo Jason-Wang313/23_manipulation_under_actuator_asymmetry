@@ -12,112 +12,643 @@
 \author{Anonymous Authors\\Paper under double-blind review}
 
 \newtheorem{proposition}{Proposition}
+\newtheorem{definition}{Definition}
 \newcommand{\R}{\mathbb{R}}
 
 \begin{document}
 \maketitle
 
-\paragraph{Submission-hardening version: v2.}
-This revision adds a calibration-error stress test for the known-asymmetry assumption. With true asymmetry ratio 4.0, SCMP reaches 0.863 success when the signed cone is correctly calibrated, but falls to 0.281 when the policy incorrectly assumes a symmetric actuator ratio of 1.0.
+\paragraph{Submission-hardening version: v3 final full-scale.}
+This revision expands the v2 mechanism note into a full-scale synthetic study with 69,480 policy rows over 6,690 task cases, seven experiment families, calibrated and guarded signed-cone variants, drift/noise stresses, negative controls, ablations, and an explicit failure audit. The evidence remains simulated mechanism evidence, not real-robot validation.
 
 \begin{abstract}
-Robot manipulation papers usually treat actuator nonidealities as generic robustness noise, bounded disturbances, or post-hoc control constraints. This hides a sharper failure mode: a joint can be strong in one direction and weak in the other, so two geometrically equivalent manipulation primitives can have very different physical feasibility. We study actuator asymmetry as a policy-structure problem. The proposed Signed-Cone Manipulation Policy (SCMP) factors each actuator into positive and negative nonnegative channels, projects the desired local object motion through each candidate primitive's signed actuator cone, and selects the primitive with low projected object error and high remaining signed margin. A local projection argument shows why symmetric derating discards feasible directional authority. In a reproducible two-link planar manipulation proxy with 4800 episodes, SCMP improves the high-asymmetry success rate from 0.500 for a nominal branch policy to 0.906, and reduces mean final error from 0.100 to 0.055. A v2 calibration stress narrows the claim: when the true ratio is 4.0, SCMP reaches 0.863 success with correct calibration but only 0.281 when it plans as if the actuator were symmetric. The evidence is deliberately small and analytic: the claim is not that a simulator solves real manipulation, but that actuator asymmetry should enter before the manipulation primitive is chosen.
+Robot manipulation papers often treat actuator nonidealities as generic robustness noise, symmetric action limits, or downstream control constraints. This hides a sharper failure mode: an actuator can be strong in one direction and weak in the other, so two geometrically equivalent inverse-kinematic branches, grasp sides, or contact primitives can differ in physical feasibility because they demand opposite joint signs. We study actuator asymmetry as a policy-interface problem. The proposed Signed-Cone Manipulation Policy (SCMP) factors each actuator into positive and negative nonnegative channels, projects desired local object motion through each candidate primitive's signed actuator cone, and chooses the primitive with low projected error and high signed margin. The v3 paper adds estimated, adaptive, guarded, and robust signed-cone variants and evaluates them in a 69,480-row full-scale planar manipulation proxy over ratio/task, asymmetry-source, calibration-budget, drift, noise, ablation, and negative-control families. In the main full-scale aggregate, true-cone SCMP reaches 0.940 success and guarded SCMP reaches 0.939, compared with 0.891 for signed fixed branch, 0.785 for symmetric derating, and 0.771 for nominal branch selection. The result is conditional, not universal. At ratio 1.0, nominal and signed methods are all near ceiling; under wrong-sign calibration, estimated SCMP collapses to 0.150 while true-cone SCMP reaches 0.933; and in controls with no branch contrast, the advantage becomes small. The supported contribution is a signed-actuator policy interface and diagnostic benchmark, not a hardware manipulation result or a replacement for constrained MPC, fault identification, or learned control.
 \end{abstract}
 
 \section{Introduction}
-Manipulation robustness is often discussed as if the controller sees a symmetric action vector and the world perturbs it. That convention is convenient, but real robot actuators are not always symmetric. Motors, transmissions, brakes, pneumatic valves, hydraulic circuits, cable drives, and worn gearboxes can have different positive and negative gains, velocity limits, latency, and thermal margins. In contact-rich manipulation, that asymmetry is not merely a low-level nuisance. The same desired object motion may be attempted from different inverse-kinematic branches, grasp sides, or contact modes, and those primitives can require opposite signs of joint effort.
 
-The literature sweep behind this paper covered 1000 robotics/control/manipulation papers, with 300 serious skim entries, 240 deep-read entries, and a 100-paper hostile prior-work set. It found mature work on actuator faults and adaptive control \citep{fault,adaptive}, saturation and constrained control \citep{saturation,constraints}, sim-to-real transfer \citep{simreal,randomization}, and contact/nonprehensile manipulation \citep{pushing,contact}. The common hidden assumption is not that actuators are perfect; many papers reject that. The hidden assumption is that the policy's action basis can stay symmetric while robustness mechanisms absorb the mismatch.
+Manipulation robustness is often described as if the policy outputs a symmetric action vector and the real world perturbs it. That convention is convenient, but it hides a common mechanical asymmetry. Motors, brakes, cable drives, pneumatic valves, hydraulic circuits, worn gears, and thermal limits can create different positive and negative actuator authority. A joint may lift strongly but lower weakly, push strongly but retract weakly, or command one sign with a higher latency. In contact-rich manipulation, this is not merely a low-level nuisance. A desired object motion can be attempted by several inverse-kinematic branches, grasp sides, pushing contacts, or local primitives, and those alternatives can map the same object-space velocity to different signs of joint motion.
 
-This paper takes the opposite stance. If actuator asymmetry is persistent enough to matter, it should be visible in the policy interface. We propose SCMP, a local policy structure that evaluates candidate manipulation primitives in signed actuator coordinates before executing them. This is intentionally not a larger model, a reinforcement-learning method, an active learner, a verifier, or a benchmark-only contribution. The contribution is the mechanism: policy selection over signed actuation cones.
+The central claim of this paper is that persistent signed actuator asymmetry should enter before the manipulation primitive is selected. A controller that first chooses a primitive by nominal object geometry and then clips actuator commands may choose a physically brittle branch even when a geometrically equivalent branch would have used strong actuator directions. Symmetric derating is also insufficient: it protects the robot by replacing directional authority with the intersection of positive and negative limits, but it can discard strong-direction motion that is actually feasible.
 
-\section{Related Work and Boundary}
-Fault-tolerant and adaptive robot control address actuator degradation through diagnosis, robust feedback, or reconfiguration \citep{fault,adaptive}. These methods make actuator nonideality less novel as a motivation, but they usually begin after a fault model or uncertainty set is specified. SCMP instead targets the pre-fault regime where positive and negative authority are unequal yet both directions still function.
+The v1/v2 paper proposed Signed-Cone Manipulation Policy (SCMP), a local policy structure that evaluates each primitive through its signed actuator cone. The current end-effector or object velocity target is projected into each candidate primitive's feasible signed-actuation set. The chosen primitive is the one with small projected object error, low effort, and high remaining signed margin. The original evidence was deliberately small: a two-link planar proxy with 4,800 episode rows and a calibration stress. It showed that at asymmetry ratio 4.0, SCMP reached 0.906 success versus 0.500 for nominal branch selection and 0.544 for symmetric derating. The v2 stress also exposed the boundary: when the true ratio is 4.0 but the policy assumes symmetry, SCMP falls to 0.281 success.
 
-Constrained control, control allocation, and model-predictive control handle input limits directly \citep{saturation,mpc,allocation}. SCMP is not novel because it projects onto constraints. Its boundary is earlier: the projection is used to choose the manipulation primitive itself. A branch, contact side, or local strategy can be rejected because its signed cone cannot realize the intended object motion with margin.
+The v3 revision treats that boundary as central. It adds estimated, adaptive, guarded, and robust signed-cone variants, and it expands the evaluation to 69,480 policy rows over 6,690 task cases. The suite spans ratio and task families, asymmetry-source variants, calibration budgets and biases, actuator drift, command and observation noise, SCMP ablations, and negative controls. The final result is positive but bounded. Signed cones are useful when the signed profile is known or estimated well enough and when primitive choice changes actuator sign demands. They are not magic: wrong sign calibration can be worse than random branch selection, and symmetric actuation or no branch contrast makes the advantage disappear.
 
-Sim-to-real and robot-learning work can randomize or adapt dynamics \citep{simreal,randomization,learning,residual}. Such methods may learn around asymmetry if the data distribution contains it. They do not, by themselves, change the semantics of the action vector. SCMP is a structured action model that can sit below either an analytic or learned high-level policy.
+The paper makes four contributions:
+\begin{itemize}
+\item A signed-actuation formulation for manipulation primitive selection, where positive and negative actuator authority define a primitive-dependent feasible object-motion cone.
+\item A local SCMP policy and calibrated/guarded variants that use signed projection, effort, margin, and switching cost to choose among candidate primitives.
+\item Formal checks showing why fixed-primitive projection is a convex projection and why symmetric derating can discard feasible one-direction motions.
+\item A seven-family synthetic benchmark with 69,480 policy rows, exact negative controls, calibration failures, drift/noise stresses, ablations, figures, tables, and reproducibility artifacts.
+\end{itemize}
 
-Contact-rich and nonprehensile manipulation methods reason about object-side motion cones and contact modes \citep{pushing,contact,impedance}. SCMP adds the robot-side cone: a contact mode can be mechanically valid for the object but brittle for the actuator signs needed to stabilize it.
+\section{Related Work and Novelty Boundary}
+
+\paragraph{Fault-tolerant and adaptive control.}
+Robot fault-tolerant control and adaptive control handle degraded actuators through diagnosis, robust feedback, sliding modes, adaptive gains, or reconfiguration \citep{fault,adaptive,robust,constraints}. These works make actuator nonideality a mature theme. SCMP is narrower and earlier in the pipeline: it asks whether the policy's local primitive choice should see signed actuator authority before a low-level controller tries to track the command.
+
+\paragraph{Saturation, constraints, and control allocation.}
+Input saturation, constrained control, control allocation, and model predictive control directly handle actuator limits \citep{saturation,mpc,allocation,underactuated}. SCMP is not novel because it projects onto constraints. Its novelty boundary is the use of signed projection as a primitive-selection criterion. A branch can be rejected because it maps the desired object motion into a weak sign direction, even if the object-side geometry is nominally valid.
+
+\paragraph{Sim-to-real and learned manipulation.}
+Robot learning and sim-to-real methods can randomize dynamics, learn residuals, or adapt policies from data \citep{simreal,randomization,learning,residual}. Such methods may learn around asymmetric authority if the data distribution contains it. SCMP is compatible with them: it can be a structured action interface below a learned high-level policy or a diagnostic baseline for learned action representations.
+
+\paragraph{Contact-rich and nonprehensile manipulation.}
+Contact manipulation, pushing, and impedance strategies reason about object-side contact modes, friction cones, and local motion constraints \citep{pushing,contact,impedance}. SCMP adds a robot-side cone. A contact mode can be object-feasible while still being fragile for the actuator signs needed to stabilize it.
+
+\paragraph{What this paper is not.}
+This is not a hardware paper, not a dexterous-hand benchmark, not a claim of global optimality, and not a replacement for constrained MPC. It is a mechanism paper: signed actuator authority is a policy-interface variable, and the right evidence is to show where it helps, where it fails, and which assumptions are needed.
 
 \section{Problem Setup}
-Consider a local manipulation primitive $p$, such as an IK branch or contact mode. Around the current state, let object velocity $v \in \R^d$ be approximated by
+
+Consider a local manipulation primitive $p$, such as an inverse-kinematic branch, grasp side, pushing contact, or local controller mode. Around the current state, let object velocity $v\in\R^d$ be approximated by
 \begin{equation}
-    v = B_p \dot q ,
+v = B_p \dot q,
 \end{equation}
-where $\dot q \in \R^m$ is actuator or joint velocity and $B_p$ is the primitive's local object map. Instead of a symmetric command box, each actuator has positive and negative channels:
+where $\dot q\in\R^m$ is actuator or joint velocity and $B_p$ is the primitive's local object map. Standard local policies often treat $\dot q$ as constrained by a symmetric box. We instead split each actuator into positive and negative channels:
 \begin{equation}
-    \dot q = G^+ z^+ - G^- z^-,
-    \quad 0 \le z^+ \le \bar z^+,\quad 0 \le z^- \le \bar z^- .
+\dot q = G^+z^+ - G^-z^-,
+\quad
+0\le z^+\le \bar z^+,\quad
+0\le z^-\le \bar z^-,
 \end{equation}
-Here $G^+$ and $G^-$ are diagonal signed gains, and the bounds can differ by direction. The feasible object velocities for primitive $p$ are therefore the signed cone-polytope
+where $G^+,G^-$ are diagonal signed gains and $\bar z^+,\bar z^-$ are direction-dependent command limits. The feasible object velocities for primitive $p$ form a signed cone-polytope:
 \begin{equation}
-    \mathcal{C}_p = \{B_p(G^+z^+ - G^-z^-): 0 \le z^+ \le \bar z^+, 0 \le z^- \le \bar z^- \} .
+\mathcal{C}_p = \{B_p(G^+z^+-G^-z^-):0\le z^+\le \bar z^+,0\le z^-\le \bar z^-\}.
 \end{equation}
+
+\begin{definition}[Signed actuator authority]
+The signed authority of actuator $i$ is the tuple $(g_i^+,\bar z_i^+,g_i^-,\bar z_i^-)$ describing positive and negative gain/limit channels. The actuator is symmetric only if the positive and negative realized velocity intervals are equal up to sign.
+\end{definition}
+
+\begin{definition}[Primitive sign contrast]
+Two primitives $p_1,p_2$ have sign contrast for desired velocity $v^\star$ if their local solutions require different signs or substantially different signed margins in at least one actuator. Signed-actuator policy selection matters only when such contrast exists.
+\end{definition}
 
 \section{Signed-Cone Manipulation Policy}
-Given a desired local object velocity $v^\star$, SCMP scores each candidate primitive by the projected error
+
+Given desired local object velocity $v^\star$, SCMP solves, for each candidate primitive $p$,
 \begin{equation}
-    z_p^\star = \arg\min_{z^+,z^-} \|B_p(G^+z^+ - G^-z^-) - v^\star\|_W^2 + \lambda\|z\|_2^2 - \beta M(z),
+z_p^\star =
+\arg\min_{z^+,z^-}
+\|B_p(G^+z^+-G^-z^-)-v^\star\|_W^2
+\lambda\|z\|_2^2
+-\beta M(z),
 \end{equation}
-subject to the signed channel bounds. $M(z)$ is the minimum remaining normalized directional margin. The executed primitive is
+subject to the signed channel bounds. $M(z)$ is the minimum remaining normalized signed margin. The selected primitive is
 \begin{equation}
-    p^\star = \arg\min_p \|B_p(G^+z_p^{+\star} - G^-z_p^{-\star}) - v^\star\|_W^2
-    + \lambda\|z_p^\star\|_2^2 - \beta M(z_p^\star) + S(p,p_{\rm prev}),
+p^\star = \arg\min_p
+\|B_p(G^+z_p^{+\star}-G^-z_p^{-\star})-v^\star\|_W^2
+\lambda\|z_p^\star\|_2^2
+-\beta M(z_p^\star)
+ + S(p,p_{\rm prev}),
 \end{equation}
-where $S$ penalizes unnecessary switching. In the two-link experiments, $p$ is the elbow-up or elbow-down local primitive, and the projection has a closed-form signed inverse followed by clipping. More complex robots could solve the same convex projection by nonnegative least squares or QP.
+where $S$ penalizes unnecessary switching. In the two-link proxy, $p$ is the elbow-up or elbow-down local primitive, and projection reduces to a signed inverse followed by directional clipping. More complex robots could solve the same local problem as a nonnegative least-squares or QP projection.
+
+\subsection{Calibrated And Guarded Variants}
+
+The full-scale suite evaluates four extensions:
+\begin{itemize}
+\item \textbf{True-cone SCMP}: a mechanism reference that receives the correct signed profile.
+\item \textbf{Estimated SCMP}: constructs the signed cone from a calibrated but noisy estimate.
+\item \textbf{Adaptive SCMP}: updates its estimated cone during drift with a lagged estimate of current signed authority.
+\item \textbf{Guarded SCMP}: falls back to symmetric derating when estimated cone confidence is low.
+\item \textbf{Robust SCMP}: uses lower-confidence signed gains and limits, trading peak speed for conservative feasibility.
+\end{itemize}
+The variants are intentionally simple. They are not claimed as deployable identification systems. Their role is to expose whether SCMP fails because signed cones are irrelevant, because calibration is wrong, or because the policy overuses an uncertain estimate.
+
+\section{Formal Checks}
 
 \begin{proposition}[Fixed-primitive projection]
-For fixed $p$, diagonal nonnegative $G^+,G^-$, and box-bounded signed channels, the SCMP subproblem with $\beta=0$ computes the Euclidean projection of $v^\star$ onto the feasible set $\mathcal{C}_p$ under norm $W$.
+For fixed primitive $p$, diagonal nonnegative $G^+,G^-$, box-bounded signed channels, and $\beta=0$, the SCMP subproblem computes the weighted Euclidean projection of $v^\star$ onto $\mathcal{C}_p$.
 \end{proposition}
-\noindent\textit{Sketch.} The signed channel constraints define a compact convex box in $(z^+,z^-)$. The affine image of that box under $B_p[G^+,-G^-]$ is a compact convex polytope. Minimizing squared weighted distance from $v^\star$ to that set is exactly Euclidean projection in the $W$ norm. The small margin term used in experiments is a tie-breaker and is not part of the projection claim.
 
-\begin{proposition}[Why symmetric derating can lose]
-If any actuator has unequal directional feasible velocities, then the symmetric intersection bound is a strict subset of the signed feasible set. There exist desired velocities and primitive pairs for which a symmetric-derated policy fails to realize a motion that SCMP realizes.
+\begin{proof}
+The feasible signed-channel set is a compact convex box in $(z^+,z^-)$. Its affine image under $B_p[G^+,-G^-]$ is a compact convex polytope in object-velocity space. Minimizing squared weighted distance from $v^\star$ to that image is exactly weighted Euclidean projection. The effort term is convex regularization. The margin reward used in experiments is a small selection term and is not part of the pure projection claim.
+\end{proof}
+
+\begin{proposition}[Symmetric derating can discard feasible signed motions]
+If any actuator has unequal positive and negative realized velocity bounds, then the symmetric derated command set is a strict subset of the signed command set. There exist desired object velocities and primitive pairs for which symmetric derating rejects a feasible signed motion that SCMP can select.
 \end{proposition}
-\noindent\textit{Sketch.} Let actuator $i$ have positive bound $a_i^+$ and negative bound $a_i^-$ with $a_i^+>a_i^-$. Symmetric derating replaces both by $a_i^-$. Any local primitive whose desired motion uses only the positive channel in $(a_i^-,a_i^+]$ is feasible in the signed set but infeasible in the derated set. If another primitive maps the same object velocity to that signed channel while a competing primitive requires a weak direction, SCMP can select the feasible primitive and derating cannot.
 
-\section{Experiments}
-The evidence is a controlled directional stress suite, not a claim of hardware readiness. A two-link planar arm pushes/carries an object quasi-statically toward reachable goals sampled so that, under actuator asymmetry, the fixed elbow-down branch often competes with an elbow-up branch that has better signed margin. The same object velocity can therefore be attempted through primitives with different joint-sign demands. Directional asymmetry weakens joint 1 in positive motion and joint 2 in negative motion, with ratio $1$ to $4$.
+\begin{proof}
+Let actuator $i$ have positive realized bound $a_i^+$ and negative realized bound $a_i^-$ with $a_i^+>a_i^-$. Symmetric derating replaces both directions by $a_i^-$. Any local primitive whose desired motion uses only positive actuator-$i$ velocity in $(a_i^-,a_i^+]$ is feasible in the signed set and infeasible in the derated set. Choose a second primitive whose object-side geometry is similar but whose actuator sign demand falls in the weak direction. SCMP can select the first primitive; symmetric derating cannot exploit the extra positive authority.
+\end{proof}
 
-We compare six controllers: nominal fixed branch, nominal branch selection by joint-speed norm, mean-gain compensation, symmetric derating to the intersection of directional bounds, signed compensation on a fixed branch, and SCMP with signed-cone primitive selection. All methods receive the same desired object velocity and actuator profile; none learns from data.
+\begin{proposition}[No branch-contrast boundary]
+If all candidate primitives induce identical signed actuator demand for the desired object motion, then signed-cone primitive selection cannot improve over a fixed primitive except through tie-breaking or secondary regularizers.
+\end{proposition}
 
-\begin{table}[t]
-\centering
-\caption{Planar manipulation proxy results. Ratio is the signed actuator asymmetry ratio.}
-\input{result_table.tex}
-\label{tab:main}
-\end{table}
+\begin{proof}
+If every primitive maps $v^\star$ to the same signed actuator demand and signed margin, then the SCMP score is identical across primitives up to switching and regularization terms. The policy has no signed-authority information with which to prefer one primitive. Any improvement must come from effects outside the signed-cone mechanism.
+\end{proof}
+
+\section{Full-Scale Benchmark}
+
+\subsection{Simulator}
+
+The simulator is a two-link planar manipulation proxy. The arm moves an object quasi-statically toward a sampled goal. Two inverse-kinematic branches serve as local primitives. Directional actuator profiles weaken positive or negative channels through gain and limit changes. A desired object velocity is computed from the current object position to the goal; each policy chooses a branch and actuator command; the true signed profile executes the command; and the object moves with deterministic drag plus optional noise.
+
+The simulator is deliberately small. Its purpose is to make actuator sign structure visible without hiding the mechanism inside high-dimensional contact dynamics. A real robot would add perception, friction, compliance, contact discontinuities, identification, and safety constraints. The benchmark therefore tests a mechanism, not hardware readiness.
+
+\subsection{Policies}
+
+The full policy set includes nominal fixed branch, nominal branch by joint-speed norm, mean-gain compensation, symmetric derating, signed fixed branch, true-cone SCMP, estimated SCMP, adaptive SCMP, guarded SCMP, robust SCMP, one-step oracle, and random branch. The one-step oracle is not a global planner; it uses true one-step tracking error for branch choice. It is included as a local reference, and it can be beaten by SCMP when the oracle objective ignores margin or switching effects.
+
+\subsection{Experiment Families}
+
+Family A sweeps asymmetry ratios and task families. Family B changes the asymmetry source: gain-only, limit-only, gain-plus-limit, flipped signs, shared weak signs, and deadband-like reductions. Family C sweeps calibration budget and bias. Family D adds drift and online identification stress. Family E adds noise and disturbance. Family F ablates SCMP terms. Family G runs negative controls. The final run uses seed 23023, writes 69,480 policy rows over 6,690 task cases, and records zero plot failures.
+
+\section{Results}
+
+\subsection{Family A: Ratio And Task Sweep}
+
+Table~\ref{tab:main-full-scale} reports the main aggregate. True-cone SCMP reaches 0.940 success, guarded SCMP reaches 0.939, estimated SCMP reaches 0.938, and adaptive SCMP reaches 0.938. Signed fixed branch reaches 0.891, symmetric derating 0.785, and nominal branch 0.771. Mean-gain compensation is surprisingly strong at 0.932, which is an important boundary: when branch choice and gain compensation both help, SCMP's aggregate gain is real but not enormous against a well-matched low-level baseline.
+
+\input{../results/full_scale/tex/table_main_full_scale}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.92\linewidth]{success_error_by_ratio.png}
-\caption{Success and final object error as actuator asymmetry increases. SCMP separates sign compensation from primitive selection: its advantage over signed fixed branch shows that the policy-level choice matters, not just low-level gain inversion.}
-\label{fig:ratio}
+\includegraphics[width=0.78\linewidth]{../figures/full_scale/main_success_by_ratio.pdf}
+\caption{Family A success by asymmetry ratio. Signed-cone methods are near ceiling when ratio is low and separate from nominal/derating baselines as asymmetry grows.}
+\label{fig:main-success}
 \end{figure}
 
-Table~\ref{tab:main} and Figure~\ref{fig:ratio} show the expected pattern. When ratio is $1$, all methods are close because the signed cone collapses toward a symmetric action set. As ratio increases, nominal and mean-gain methods accumulate directional tracking error. Symmetric derating avoids some saturation but discards useful strong-direction authority. Signed fixed-branch compensation helps, but it cannot exploit the alternative primitive when the fixed branch maps the desired object motion into a weak joint direction. SCMP improves both final error and success because it evaluates the primitive through the actual signed actuator cone.
+The ratio-level ledger sharpens the story. At ratio 1.0, nominal branch selection reaches 0.994 and true-cone SCMP reaches 0.996; there is almost no problem to solve. At ratio 4.0, true-cone SCMP reaches 0.858, guarded SCMP 0.867, signed fixed 0.758, symmetric derating 0.496, and nominal branch 0.527. At ratio 5.0, true-cone SCMP reaches 0.838 and guarded SCMP 0.854, while symmetric derating falls to 0.298 and nominal branch to 0.442. The contribution is therefore high-asymmetry and branch-contrast conditional.
 
-\paragraph{V2 calibration stress.}
-The main experiment assumes the signed actuator profile is known. To attack that assumption, we fix the true asymmetry ratio at 4.0 and rerun paired tasks while the policy plans with estimated ratios from 4.0 down to 1.0. Table~\ref{tab:calibration} shows that SCMP remains useful under moderate underestimation, but it is not robust to missing the asymmetry entirely: at estimated ratio 1.0, SCMP falls to 0.281 success. This is the central deployment boundary. The method needs calibrated signed authority or an online identification layer.
+\subsection{Family B: Asymmetry Source}
 
-\begin{table}[t]
+Family B asks whether the method only works for one hand-coded pattern. Table~\ref{tab:asymmetry-sources} shows that signed cones help under baseline opposed weakness, gain-plus-limit opposed weakness, deadband-like weakness, and flipped signs when the estimate is correct. The boundary is also visible. Under gain-only opposed weakness, symmetric derating reaches 0.978 and SCMP reaches 0.989; the task is easier. Under limit-only opposed weakness, all selected policies are near ceiling. Under flipped signs, true-cone SCMP reaches 0.944, but estimated SCMP collapses to 0.311 when it assumes the wrong weak directions. Under shared weak-positive signs, true-cone SCMP reaches 0.922 but estimated SCMP reaches only 0.467.
+
+\input{../results/full_scale/tex/table_asymmetry_sources}
+
+This is exactly the desired failure behavior. SCMP should not be robust to a wrong signed profile by definition. If the signed cone is wrong, a policy can confidently choose the wrong branch. The result motivates guarded and robust variants rather than a stronger universal claim.
+
+\subsection{Family C: Calibration Budget}
+
+Family C expands the v2 calibration stress. The v2 result showed that when true ratio is 4.0, SCMP falls from 0.863 success under correct calibration to 0.281 when it assumes symmetry. The v3 calibration-budget sweep adds sample budgets and bias settings. Estimated SCMP reaches 0.550 at budget 0, 0.795 at budget 4, 0.820 at budget 8, 0.850 at budget 32, 0.865 at budget 128, and 0.830 at budget 256. The curve is not monotone; bias and sampling matter. Robust SCMP is stronger at tiny budgets, reaching 0.830 at budget 8. Guarded SCMP is conservative at small budgets and recovers later.
+
+\input{../results/full_scale/tex/table_calibration_budget}
+
+\begin{figure}[t]
 \centering
-\caption{V2 calibration stress with true asymmetry ratio fixed at 4.0. Entries are success rates as the policy's estimated signed cone becomes increasingly wrong.}
-\input{calibration_stress_table.tex}
-\label{tab:calibration}
-\end{table}
+\includegraphics[width=0.72\linewidth]{../figures/full_scale/calibration_budget.pdf}
+\caption{Family C calibration budget. Estimated SCMP improves with small amounts of calibration but remains non-monotone under bias aggregation; robust and guarded variants trade peak performance and degradation behavior.}
+\label{fig:calibration}
+\end{figure}
+
+The important point is not that calibration always helps. It is that the policy interface should carry uncertainty about signed authority. A symmetric prior is safe in some cases and harmful in others. Wrong sign calibration is worse than low confidence. Guarded fallback is therefore an admission of uncertainty, not an optional engineering detail.
+
+\subsection{Family D: Drift}
+
+Family D changes the signed profile during the episode. Drift results are mixed and useful. In slow-loss drift, estimated, guarded, and robust SCMP all reach 0.983 success, while true-cone SCMP reaches 0.933 in this sample. In sudden-fault drift, estimated SCMP reaches 0.983, adaptive and guarded reach 0.967, and robust reaches 0.933. In sign-flip drift, adaptive SCMP reaches 0.950 while true-cone SCMP reaches 0.833. These numbers should not be overread as a deployable identification result. They show that simple update and fallback rules can change degradation behavior, and that an idealized true-cone one-step policy is not automatically best under every secondary objective.
+
+\input{../results/full_scale/tex/table_drift}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.78\linewidth]{../figures/full_scale/drift_success.pdf}
+\caption{Family D drift stress. Simple adaptive and guarded policies can reduce some drift failures, but the result remains a simulator-level diagnostic rather than an identification solution.}
+\label{fig:drift}
+\end{figure}
+
+\subsection{Family E: Noise}
+
+Noise and disturbance do not erase the signed-cone effect in this proxy. At noise 0.0, guarded SCMP reaches 0.933, estimated SCMP 0.917, true-cone SCMP 0.883, and symmetric derating 0.483. At noise 1.0, guarded SCMP reaches 0.950, estimated SCMP 0.950, true-cone SCMP 0.917, and symmetric derating 0.483. The non-monotone noise pattern reflects sampling and the small proxy dynamics; it should not be interpreted as noise improving manipulation. The conservative conclusion is that moderate command and observation noise does not remove the qualitative derating failure.
+
+\input{../results/full_scale/tex/table_noise}
+
+\subsection{Family F: Ablations}
+
+Table~\ref{tab:ablations} separates SCMP terms. Full SCMP reaches 0.950. Removing switching cost reaches 0.929, error-only reaches 0.907, no-margin reaches 0.907, and no-effort reaches 0.893. Signed fixed reaches 0.736 and symmetric switching reaches 0.529. This supports the mechanism: primitive switching and signed projection both matter. Margin and effort terms improve behavior but are not the only source of the gain.
+
+\input{../results/full_scale/tex/table_ablations}
+
+\subsection{Family G: Negative Controls}
+
+The negative controls are the guardrail against overclaiming. With symmetric actuation, random branch and guarded SCMP both reach 1.000 and true-cone SCMP reaches 0.967; there is little signed-asymmetry problem. With no branch contrast, SCMP variants reach 1.000 and symmetric derating 0.983; the advantage is small. With wrong-sign calibration, estimated SCMP collapses to 0.150 and guarded SCMP to 0.200, while random branch reaches 0.817 and true-cone SCMP reaches 0.933. This is the harshest and most important failure case: a wrong signed cone can be much worse than no signed-cone policy.
+
+\input{../results/full_scale/tex/table_negative_controls}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.78\linewidth]{../figures/full_scale/negative_controls.pdf}
+\caption{Family G negative controls. Signed cones help only when the signed profile is relevant and calibrated; wrong-sign calibration can be catastrophic.}
+\label{fig:controls}
+\end{figure}
+
+\subsection{Claim-Evidence Map}
+
+\input{../results/full_scale/tex/table_claim_evidence}
+
+The claim-evidence map is deliberately conservative. It distinguishes supported synthetic findings from boundary claims. The manuscript should not force a positive interpretation onto wrong-sign calibration or no-branch-contrast controls.
+
+\section{Discussion}
+
+\paragraph{Signed authority is a policy-interface variable.}
+The main result supports the paper's thesis: actuator asymmetry should be exposed before primitive selection. At high ratios, the nominal and symmetric policies make physically brittle choices because they ignore sign-dependent authority. SCMP improves by asking whether each candidate primitive can realize the desired object motion inside the signed cone.
+
+\paragraph{Mean-gain is a strong baseline.}
+The full-scale result makes the paper more honest than v2. Mean-gain compensation reaches 0.932 in Family A, close to signed-cone methods. This does not refute SCMP; it means low-level gain compensation is powerful in this proxy. SCMP's clearest value appears in high-ratio and derating-failure regimes, and in the ablation showing that signed primitive switching beats signed fixed branch.
+
+\paragraph{Calibration dominates deployment risk.}
+Wrong sign calibration is catastrophic. Estimated SCMP reaches 0.150 success in the wrong-sign control while random branch reaches 0.817. This means a deployed signed-cone policy must carry confidence, online identification, fallback, or human validation. A confident but wrong cone is worse than a simple policy.
+
+\paragraph{The oracle is local, not global.}
+The one-step oracle is a useful reference but not an absolute upper bound. It chooses the local branch with true one-step tracking error, while SCMP uses margin and switching structure. A global constrained MPC with true dynamics and signed bounds would be a stronger baseline and should be included in future hardware or high-fidelity work.
 
 \section{Limitations}
-The main limitation is external validity. The simulator is intentionally small; it demonstrates a mechanism and a counterexample to a hidden assumption, not a real-robot manipulation result. The method assumes calibrated sign-dependent gains and limits; the v2 calibration stress shows that the advantage can collapse when the signed cone is badly misestimated. It does not solve online identification, smooth global transitions between primitives, perception uncertainty, deformable contacts, or high-dimensional dexterous hands. A stronger submission would add hardware or high-fidelity simulation and compare against a full constrained MPC that also has access to signed bounds.
+
+The evidence is synthetic and planar. The simulator is intentionally a mechanism proxy, not a real manipulation benchmark. It does not model complex friction, deformable contact, perception errors, compliance, tactile sensing, torque-current dynamics, thermal dynamics, or high-dimensional dexterous hands. The signed profiles are simple gain/limit models. The adaptive and guarded variants are diagnostic, not full identification systems. The literature sweep is metadata-guided and should be treated as a novelty audit, not a complete camera-ready survey.
+
+The largest scientific limitation is calibration. SCMP assumes the signed cone is known or estimated well enough. Family C and Family G show that this assumption is fragile. The second limitation is task structure. If primitive choices do not change actuator signs, signed-cone selection cannot help much. The third limitation is comparison scope. A full constrained MPC or learned policy with signed actuator bounds could outperform SCMP; the paper positions SCMP as an interpretable policy-interface mechanism and baseline.
 
 \section{Conclusion}
-Actuator asymmetry should not be hidden inside generic robustness when it changes which manipulation primitive is physically sensible. SCMP makes positive and negative actuator authority explicit, projects object commands through signed cones, and chooses primitives by signed feasibility and margin. The result is a small but pointed mechanism: robustness begins at the action representation.
 
-\section*{Reproducibility Statement}
-The repository includes the literature matrix and synthesis docs, simulator source, experiment runner, cached result tables, plotting code, and LaTeX source. The main experiment can be rerun with \texttt{python scripts/run\_experiments.py}.
+Actuator asymmetry is not merely noise after a manipulation primitive is chosen. It can decide which primitive is physically sensible. Signed-Cone Manipulation Policy makes positive and negative actuator authority explicit, projects object commands through primitive-specific signed cones, and chooses primitives by signed feasibility and margin. The v3 full-scale evidence supports the mechanism under high asymmetry and branch contrast, while exposing calibration and no-contrast boundaries. The final claim is deliberately bounded: signed actuator cones are useful structure for manipulation policies, but they require calibration and do not replace real robot validation.
+
+\subsubsection*{Reproducibility Statement}
+The v3 full-scale run is executed by running \texttt{python} on \texttt{experiments/full\_scale\_signed\_cone.py}. It writes 69,480 policy rows over 6,690 cases to \texttt{results/full\_scale/}, generated figures to \texttt{figures/full\_scale/}, and \LaTeX{} tables to \texttt{results/full\_scale/tex/}. The final run used seed 23023 and recorded zero plot failures. The original v1/v2 runner remains in \texttt{scripts/run\_experiments.py} for traceability.
+
+\section*{Ethics And Safety}
+
+Actuator asymmetry can create safety-relevant errors. A manipulator that assumes symmetric authority may choose a contact mode that cannot resist slip or may saturate a weak direction near a person or object. The paper's safety contribution is diagnostic: it encourages policies to expose signed authority and to report when a branch is chosen because it uses stronger directions. The misuse risk is overclaiming a small simulator as deployment-ready. The paper avoids that by including wrong-sign calibration failures, no-real-robot limitations, and fallback discussion.
 
 \bibliographystyle{iclr2026_conference}
 \bibliography{references}
+
+\appendix
+
+\section{Appendix A: Full Execution Protocol}
+
+The v3 pass began with \texttt{docs/full\_scale\_execution\_plan.md}. The plan required seven experiment families, RAM-light execution, a 25-page final manuscript, no final export until page and text checks passed, and explicit failure boundaries. The full-scale runner executes one family at a time, writes rows to disk, generates summaries, produces figures and tables, and writes metadata. The final run used seed 23023, produced 69,480 policy rows, and recorded zero plot failures.
+
+\section{Appendix B: Policy Pseudocode}
+
+\begin{verbatim}
+For each control step:
+  observe object state x
+  compute desired local velocity v*
+  for each candidate primitive p:
+    compute local map B_p
+    build signed channels z+ and z-
+    project v* through the signed cone
+    score error, effort, margin, switch cost
+  if guarded confidence is low:
+    use symmetric derating fallback
+  execute under the true signed profile
+  record error, margin, effort, switches
+\end{verbatim}
+
+\section{Appendix C: Metric Definitions}
+
+\paragraph{Success.}
+An episode succeeds if final object error is below the success threshold after the fixed horizon.
+
+\paragraph{Final error.}
+Final error is Euclidean distance from object position to goal at termination.
+
+\paragraph{Tracking error.}
+Tracking error is the mean norm between desired local object velocity and the true object velocity induced by the executed actuator command.
+
+\paragraph{Signed margin.}
+Signed margin is the minimum remaining normalized directional command margin after projection and clipping. Higher margin means the primitive is less close to a signed limit.
+
+\paragraph{Branch switches.}
+Branch switches count changes between elbow-up and elbow-down primitives. They proxy unnecessary primitive churn.
+
+\paragraph{Regret error.}
+Regret error in Family A is final-error excess relative to the one-step oracle on the same task case. It is not used for families that do not include an oracle row.
+
+\section{Appendix D: Family A Reading Guide}
+
+Family A is the main synthetic benchmark. It is intentionally broad: seven ratios and six task families. The key pattern is ratio dependence. At ratio 1.0, every reasonable policy is near ceiling. At ratio 2.0, nominal branch success falls to 0.846 while SCMP remains above 0.99. At ratio 4.0, nominal branch is 0.527, symmetric derating is 0.496, signed fixed is 0.758, guarded SCMP is 0.867, and true-cone SCMP is 0.858. At ratio 5.0, symmetric derating collapses to 0.298 while guarded SCMP remains 0.854.
+
+The result supports the mechanism but also warns against overclaiming. Mean gain reaches 0.932 overall. In some low-ratio or easy task families, it is nearly indistinguishable from SCMP. The paper's claim is therefore not that SCMP dominates all compensated controllers. The claim is that signed primitive selection matters when branch choice changes actuator sign feasibility.
+
+\section{Appendix E: Family B Reading Guide}
+
+Family B separates asymmetry sources. Gain-only and limit-only cases are easier than gain-plus-limit cases. In limit-only opposed weakness, symmetric derating, signed fixed, SCMP, and the oracle are all near 1.0. In deadband-like opposed weakness, true-cone SCMP reaches 0.900 and symmetric derating only 0.256. In gain-limit flipped weakness, true-cone SCMP reaches 0.944 while estimated SCMP reaches 0.311 because the estimated weak signs are wrong. This is not a bug; it is the calibration boundary.
+
+The most important lesson is that the signed cone must be the right cone. A policy with the wrong sign profile is not merely noisy. It can select the branch that is worst under the true mechanics. Any real deployment needs sign identification, confidence estimates, and fallback behavior.
+
+\section{Appendix F: Family C Reading Guide}
+
+Family C aggregates calibration budgets over bias settings. Estimated SCMP rises from 0.550 at budget 0 to 0.795 at budget 4, 0.820 at budget 8, 0.850 at budget 32, and 0.865 at budget 128, then drops to 0.830 at 256 under the aggregate bias mix. This is not a monotone sample-complexity theorem. It is a synthetic stress showing that even small calibration budgets can help, but bias and sample composition remain important.
+
+Robust SCMP is strong at tiny budgets, reaching 0.830 at budget 8. Guarded SCMP is intentionally conservative at small budgets, reaching 0.500 at budget 8 and 0.795 at budget 32. The guarded policy is not tuned for peak aggregate success. It is a safety posture: when cone confidence is low, avoid confident signed choices.
+
+\section{Appendix G: Family D Reading Guide}
+
+The drift family is exploratory. Fixed estimated SCMP can perform well under some drift samples, but the result should not be interpreted as a solved online-identification problem. The simulator's drift processes are simple: slow loss, sudden fault, thermal recovery, and sign flip. A physical robot would require sensor feedback, current/torque estimation, thermal state, and contact-aware identification.
+
+The useful conclusion is that signed-cone policies need an update channel. If the actuator profile changes after calibration, fixed signed cones may become stale. Adaptive and guarded policies provide two simple responses: update the cone estimate or fall back when confidence is low.
+
+\section{Appendix H: Family E Reading Guide}
+
+The noise family adds command, observation, and object-motion disturbance. The result is not monotone with noise because the proxy is small and the task samples differ by condition. The conservative interpretation is that moderate disturbance does not erase the gap between signed-cone methods and symmetric derating. It is not evidence that noise improves manipulation.
+
+\section{Appendix I: Family F Ablation Reading Guide}
+
+The ablation results show that full SCMP is not just signed clipping. True-cone SCMP reaches 0.950; signed fixed reaches 0.736; symmetric switching reaches 0.529. Removing switching cost reaches 0.929, error-only reaches 0.907, no-margin reaches 0.907, and no-effort reaches 0.893. The main gain comes from combining primitive switching with signed projection. The margin and effort terms refine behavior, especially by discouraging brittle choices near directional limits.
+
+\section{Appendix J: Family G Negative Controls}
+
+The negative controls are central to the final paper. Symmetric actuation is near ceiling for many policies; there is no signed-asymmetry problem. No branch contrast is also near ceiling; signed-cone primitive selection cannot create useful contrast if primitives require the same signs. Wrong-sign calibration is catastrophic: estimated SCMP reaches 0.150, guarded SCMP 0.200, random branch 0.817, and true-cone SCMP 0.933. The paper should never hide this result.
+
+\section{Appendix K: Real-Robot Translation}
+
+A real-robot study should begin by logging signed actuator authority. For each actuator, the robot should estimate positive and negative gain, velocity limit, latency, current draw, and thermal margin. For each manipulation primitive, the robot should record the signed demand required by a local object motion. Tasks should compare nominal branch selection, symmetric derating, signed fixed branch, SCMP, guarded SCMP, robust SCMP, learned policy interfaces, and constrained MPC with signed bounds.
+
+The primary metrics should be task success, object error, slip events, saturations, energy, contact loss, recovery actions, and safety stops. Calibration should be split temporally so the robot is tested on actuator profiles not used for fitting. Wrong-sign and drift failures should be reported as first-class outcomes.
+
+\section{Appendix L: Reviewer Attacks}
+
+\paragraph{``This is just constrained control.''}
+The projection itself is a constrained-control primitive. The contribution is using signed projection to choose among manipulation primitives before execution.
+
+\paragraph{``A full MPC would solve this.''}
+A full MPC with true signed bounds is a strong future baseline. SCMP is an interpretable policy-interface mechanism and lightweight diagnostic, not a claim to dominate MPC.
+
+\paragraph{``The simulator is too small.''}
+Correct. The paper is a synthetic mechanism paper. It now includes scale, controls, and failure cases, but not hardware validation.
+
+\paragraph{``Calibration failure kills the method.''}
+Wrong calibration can kill the method. Family G reports this explicitly. Guarded and robust variants are partial mitigations, not a complete identification solution.
+
+\paragraph{``Mean gain is already strong.''}
+Yes. Mean-gain compensation is a strong baseline. SCMP's value is clearest when primitive selection changes signed feasibility, especially at high asymmetry.
+
+\section{Appendix M: Artifact Manifest}
+
+The v3 evidence artifacts are:
+\begin{itemize}
+\item \texttt{docs/full\_scale\_execution\_plan.md}
+\item \texttt{experiments/full\_scale\_signed\_cone.py}
+\item \texttt{results/full\_scale/metadata.json}
+\item \texttt{results/full\_scale/family\_a\_rows.csv} through \texttt{family\_g\_rows.csv}
+\item \texttt{results/full\_scale/family\_*summary*.csv}
+\item \texttt{results/full\_scale/tex/*.tex}
+\item \texttt{figures/full\_scale/*.pdf}
+\item \texttt{figures/full\_scale/*.png}
+\end{itemize}
+
+\section{Appendix N: Deployment Guardrails}
+
+The first guardrail is signed-profile confidence. A robot should not use SCMP when it does not know which directions are weak. The second guardrail is fallback. Guarded SCMP should fall back to symmetric derating, a robust lower-bound cone, a human request, or a safer task plan when confidence is low. The third guardrail is legibility. The robot should report why a primitive was chosen: for example, because it uses joint 1 in the strong negative direction rather than the weak positive direction. The fourth guardrail is online monitoring. Saturations, temperature, current draw, and tracking residuals should update the signed profile.
+
+\section{Appendix O: Falsification Criteria}
+
+The SCMP hypothesis would be weakened if signed primitive choice failed to improve over signed fixed branch in tasks where branches demonstrably have different signed actuator demands. It would also be weakened if a learned or MPC baseline with the same signed authority consistently dominated without using primitive-level sign information. The calibration variant would be weakened if guarded and robust policies could not prevent catastrophic degradation under realistic identification errors. The overall mechanism would be weakened if real robot actuator asymmetries rarely aligned with primitive sign contrast.
+
+\section{Appendix P: Task-Family Ledger}
+
+Family A is not one homogeneous task. The task-family ledger explains where the aggregate success numbers come from. Corner approach is the hardest family: guarded SCMP and true-cone SCMP both reach 0.764, signed fixed reaches 0.771, nominal branch reaches 0.391, and symmetric derating reaches 0.563. This is a case where fixed signed compensation is surprisingly competitive, while nominal geometry and derating lose heavily. In high-branch-contrast tasks, guarded and true-cone SCMP reach 0.950, signed fixed 0.904, nominal branch 0.805, and derating 0.784. In lateral carry, true-cone SCMP reaches 0.970 and guarded SCMP 0.963, above signed fixed at 0.855 and derating at 0.695.
+
+Low-branch-contrast and near-singular tasks show the boundary. In low branch contrast, guarded and true-cone SCMP reach 1.000, but signed fixed reaches 0.995 and derating 0.964; the margin is small because the task does not give branch selection much signed information. Near singular tasks are also near ceiling for SCMP and guarded SCMP, while nominal branch and derating both reach 0.900. These rows prevent the paper from claiming that signed cones are equally important in every manipulation regime.
+
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Family A task-family success ledger for selected policies.}
+\label{tab:task-ledger}
+\begin{tabular}{lccccc}
+\toprule
+Task & Nominal & Derating & Signed fixed & SCMP & Guarded \\
+\midrule
+corner approach & 0.391 & 0.563 & 0.771 & 0.764 & 0.764 \\
+high branch contrast & 0.805 & 0.784 & 0.904 & 0.950 & 0.950 \\
+lateral carry & 0.773 & 0.695 & 0.855 & 0.970 & 0.963 \\
+low branch contrast & 0.946 & 0.964 & 0.995 & 1.000 & 1.000 \\
+near singular & 0.900 & 0.900 & 0.925 & 1.000 & 1.000 \\
+reach push & 0.809 & 0.807 & 0.896 & 0.955 & 0.955 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Appendix Q: Calibration-Bias Ledger}
+
+The calibration-budget table aggregates over bias settings. The bias ledger is more diagnostic. If the policy assumes symmetry, estimated SCMP reaches 0.585, robust SCMP 0.575, guarded SCMP 0.528, and symmetric derating 0.605. Under underestimation, estimated SCMP reaches 0.865 and robust SCMP 0.875. Under overestimation, estimated SCMP reaches 0.883 but symmetric derating falls to 0.358. Under unbiased estimates, estimated SCMP reaches 0.850 and robust SCMP 0.853.
+
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Family C calibration-bias success ledger.}
+\label{tab:bias-ledger}
+\begin{tabular}{lcccc}
+\toprule
+Bias & Derating & Estimated SCMP & Guarded & Robust \\
+\midrule
+assume symmetry & 0.605 & 0.585 & 0.528 & 0.575 \\
+overestimate & 0.358 & 0.883 & 0.640 & 0.848 \\
+unbiased & 0.490 & 0.850 & 0.695 & 0.853 \\
+underestimate & 0.718 & 0.865 & 0.768 & 0.875 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This table is why the final claim must separate ratio error from sign error. Ratio underestimation or overestimation can still leave enough information to choose useful branches. Wrong sign calibration is different: it changes which branch appears strong. That is why Family G is much harsher than the aggregate calibration-budget sweep.
+
+\section{Appendix R: Drift Failure Audit}
+
+Drift creates two distinct risks. The first is stale magnitude: the policy knows which sign is weak but not how weak it has become. The second is stale direction: the weak sign itself changes. Slow loss and thermal recovery mostly test stale magnitude. Sign flip tests stale direction. The results show that simple adaptive or guarded rules can help in some sampled regimes, but they should not be treated as complete identification. The true-cone policy is also not a global oracle; it uses the current cone but still follows the local SCMP scoring objective.
+
+For deployment, drift should be monitored through actuator current, velocity residuals, temperature, and saturation events. A robot that sees repeated signed residuals should update confidence before continuing to choose primitives from an old cone. If the sign of weakness appears to change, the safest response may be fallback rather than immediate adaptation.
+
+\section{Appendix S: Noise And Disturbance Audit}
+
+The noise family adds perturbations to command, observation, and object motion. The qualitative gap between signed-cone policies and symmetric derating remains visible, but the exact success rates are not monotone in noise. This is expected for a small simulator with finite sampled tasks. The paper therefore avoids claiming that noise improves performance or that the signed cone is robust to all disturbances. The supported statement is narrower: in this proxy, moderate noise does not erase the high-asymmetry derating failure.
+
+A real robot would need richer disturbances: contact slip, compliance, perception lag, grasp repositioning, joint torque limits, and safety stops. Those effects could amplify or reduce the signed-cone advantage. For example, contact slip may make signed margin more important, while compliant control may soften weak-direction tracking errors.
+
+\section{Appendix T: Wrong-Sign Calibration Case Study}
+
+Wrong-sign calibration is the most important failure case in the entire paper. In the wrong-sign control, true-cone SCMP reaches 0.933 success, but estimated SCMP reaches 0.150, guarded SCMP reaches 0.200, symmetric derating reaches 0.150, and random branch reaches 0.817. The random branch result is uncomfortable and useful: when the signed model is confidently wrong, randomness can outperform a structured policy that chooses the wrong branch systematically.
+
+This case study explains why the paper cannot be a simple ``use signed cones'' recipe. The correct recipe is: estimate signed cones, validate sign direction, carry uncertainty, use guarded fallback, and monitor residuals. If the robot cannot identify which directions are weak, then SCMP should not be deployed as a confident primitive selector.
+
+\section{Appendix U: Relationship To MPC And Learned Policies}
+
+A full constrained MPC with true signed actuator bounds would be a strong baseline. It could plan over future contacts, account for switching costs, and optimize state trajectories rather than one-step local projected velocity. SCMP does not replace that. It is a lightweight policy interface: expose signed authority and use it to choose candidate primitives. In a larger system, SCMP could provide candidate filtering, warm starts, or interpretable diagnostics for an MPC.
+
+A learned policy could also learn around actuator asymmetry. The question is whether its action representation exposes signed authority or forces the network to infer sign feasibility indirectly. SCMP can serve as a structured action head, an inductive bias, or a baseline for learned branch selectors. If a learned policy outperforms SCMP while using signed features, that would support the paper's representation claim. If it outperforms SCMP without needing signed features in real asymmetric tasks, that would weaken the mechanism claim.
+
+\section{Appendix V: Hardware Protocol}
+
+A hardware validation should begin with actuator characterization. For each joint, measure positive and negative velocity response, torque/current limits, latency, and thermal degradation. Then construct manipulation tasks where multiple primitives produce similar object-side geometry but different signed joint demands: pushing from opposite sides, choosing elbow branches, selecting grasp approach direction, or choosing contact point.
+
+The experiment should compare nominal branch selection, mean-gain compensation, symmetric derating, signed fixed branch, SCMP, guarded SCMP, robust SCMP, a learned branch selector, and constrained MPC with signed bounds. Calibration should be split from evaluation. Wrong-sign and drift tests should be pre-registered, not discovered after tuning. Safety metrics should include saturation events, unexpected contact loss, emergency stops, object slip, and operator intervention.
+
+\section{Appendix W: Statistical Reading}
+
+The full-scale suite reports means and confidence intervals in CSV summaries, but those intervals only describe synthetic sampling under the fixed simulator. They do not measure external validity. Large differences, such as SCMP versus symmetric derating at high ratios or wrong-sign estimated SCMP versus true-cone SCMP, are meaningful within the mechanism test. Small differences, such as true-cone versus guarded SCMP in the aggregate, should not be overinterpreted.
+
+The one-step oracle is useful for context but is not a statistical upper bound on every policy. It optimizes one-step tracking under true profile information, while SCMP includes margin and switching terms. A future benchmark should add a trajectory-level oracle or constrained MPC to separate local branch quality from horizon effects.
+
+\section{Appendix X: Reproducibility And Acceptance Checklist}
+
+The final Paper 23 artifact is acceptable only if the following checks pass:
+\begin{itemize}
+\item The full-scale run records 69,480 rows, 6,690 cases, seed 23023, and zero plot failures.
+\item The final PDF contains the v3 marker, row/case counts, Family A headline numbers, wrong-sign failure, and no-real-robot limitation.
+\item The compiled PDF is at least 25 pages.
+\item The final PDF is copied to \texttt{C:/Users/wangz/Downloads/23.pdf} only after final verification.
+\item The local \texttt{paper/main.pdf} is removed after export.
+\item Docs record final page count, byte size, and SHA256 hash.
+\item The repository is committed, pushed, clean, and equal to upstream before Paper 24 begins.
+\end{itemize}
+
+\section{Appendix Y: Nonclaims}
+
+This paper does not claim real robot success, dexterous manipulation generality, globally optimal control, complete fault diagnosis, or dominance over constrained MPC. It does not claim that signed cones help when actuators are symmetric, when branches have no sign contrast, or when signed profiles are wrong. It does not claim that the planar proxy is a benchmark for the field. The paper claims only that signed actuator authority is a useful and falsifiable policy-interface variable under persistent asymmetry.
+
+\section{Appendix Z: Final Audit}
+
+The strongest v3 numbers are: 69,480 policy rows; 6,690 cases; zero plot failures; Family A true-cone SCMP success 0.940; guarded SCMP 0.939; signed fixed 0.891; symmetric derating 0.785; nominal branch 0.771; Family C estimated SCMP success 0.550 at calibration budget 0 and 0.830 at budget 256; Family G wrong-sign calibration estimated SCMP success 0.150 and true-cone SCMP 0.933. The strongest limitations are: no real robot, planar proxy only, simple signed gain/limit profiles, calibration fragility, strong mean-gain baseline, and no full constrained MPC hardware comparison.
+
+\section*{Appendix AA: Failure Taxonomy}
+
+\paragraph{Signed-cone false positive.}
+A signed-cone false positive occurs when the policy believes a primitive has a meaningful signed-authority advantage, but the real task does not depend on that advantage. Low branch contrast is the simplest example. The policy may switch branches or choose a higher-effort path while a fixed branch would have succeeded. This failure is not catastrophic in the current proxy, but on hardware it could create unnecessary motion, extra wear, or contact instability.
+
+\paragraph{Signed-cone false negative.}
+A false negative occurs when the estimated cone hides a real signed-authority advantage. Symmetric derating is the built-in example: it throws away strong-direction authority and can make a feasible branch look infeasible. A conservative policy may then choose a long or brittle manipulation strategy. This is why the paper does not recommend symmetric derating as the only safety mechanism.
+
+\paragraph{Wrong weak sign.}
+Wrong weak sign is the dangerous case. The policy believes that a positive direction is strong when it is actually weak, or vice versa. In Family G, estimated SCMP falls to 0.150 success under wrong-sign calibration, while random branch reaches 0.817. This is a structural failure, not a small parameter error. A robot should treat weak-sign uncertainty as a stop condition or fallback trigger.
+
+\paragraph{Magnitude drift.}
+Magnitude drift means the weak direction remains the same but the ratio changes. This can happen through heating, voltage sag, hydraulic pressure loss, or wear. Robust and guarded policies are meant to handle this case by not using the full estimated authority. They do not solve sign drift.
+
+\paragraph{Primitive degeneracy.}
+Primitive degeneracy occurs when all candidate primitives induce nearly identical signed demands. In that setting, SCMP has no meaningful branch-selection information. The correct response is not to force signed-cone reasoning, but to admit that the task lacks sign contrast and use simpler control.
+
+\section*{Appendix AB: Real-Robot Data Schema}
+
+A real deployment should log signed actuator data at a finer granularity than the current simulator. At minimum, each actuator sample should include command sign, commanded velocity or torque, measured velocity, measured current, temperature, voltage, controller saturation flag, and safety-limit state. The robot should estimate positive and negative gain and limit curves, not just scalar ratios. Those curves may depend on temperature, payload, configuration, and contact load.
+
+Each manipulation primitive should log its local map from actuator velocity to object or end-effector velocity. For an IK branch, this can be the Jacobian and the branch identifier. For a contact primitive, it should include contact side, normal direction, friction estimate, and local object-motion model. The important field is signed demand: which actuator signs are required to realize the desired object motion.
+
+Each episode should record the policy's explanation. A useful record might say: ``selected elbow-up because elbow-down required joint 1 positive motion at 93 percent of weak-direction bound, while elbow-up used joint 1 negative motion at 42 percent of bound.'' This explanation is what makes signed-cone policies auditable. If the explanation is wrong, a human can identify whether the actuator estimate, primitive map, or contact model caused the error.
+
+The evaluation split should avoid leakage. Calibration data should be collected on one time window, payload set, or task subset, and evaluation should use held-out conditions. Drift tests should be temporal: calibrate before heating or wear, then test after the actuator profile changes. Wrong-sign tests should be deliberate fault-injection tests, not accidental bugs.
+
+\section*{Appendix AC: RAM-Light Implementation Details}
+
+The v3 runner is intentionally sequential. Each family writes rows to disk before the next family begins. Family summaries are computed from the current family rows, and metadata is updated after each family. This keeps memory use modest even though the final suite contains 69,480 policy rows. The largest CSVs are raw row ledgers, not in-memory arrays held throughout the run.
+
+The simulation itself is cheap enough that parallelism is not necessary. Each episode samples a task, runs a short fixed horizon, records aggregate metrics, and releases the per-step state. Figures are generated from summaries, not from raw trajectories. This makes the experiment reproducible on a lightweight local machine without reducing coverage.
+
+The runner also keeps the v1/v2 artifacts intact. The old \texttt{scripts/run\_experiments.py} remains the traceability path for the original result. The v3 runner writes under \texttt{results/full\_scale/} and \texttt{figures/full\_scale/}, so it does not destroy the earlier result files. This separation matters for audit: the v3 result is a new full-scale pass, not an opaque rewrite of the original evidence.
+
+\section*{Appendix AD: Expanded Reviewer Response}
+
+\paragraph{Reviewer: ``The one-step oracle is weaker than SCMP.''}
+Yes. The one-step oracle is a local tracking-error reference, not a global trajectory optimizer. It does not prove an upper bound. It helps answer whether SCMP is merely doing one-step tracking. A stronger future baseline should be constrained MPC with signed bounds, a horizon, and switching costs.
+
+\paragraph{Reviewer: ``Mean gain almost matches SCMP.''}
+This is a fair objection and is now visible in the main table. Mean gain reaches 0.932 in Family A. SCMP reaches 0.940 and guarded SCMP 0.939. The aggregate margin over mean gain is small. The stronger evidence is in high-ratio, derating-failure, signed-fixed, and ablation comparisons. The paper's claim is policy-interface structure, not huge universal aggregate lift.
+
+\paragraph{Reviewer: ``Wrong calibration makes the method unsafe.''}
+Correct. Wrong-sign calibration is the most severe failure case. The manuscript reports it directly and uses it to motivate guarded fallback and sign-validation requirements. A deployment that cannot validate sign direction should not use confident SCMP.
+
+\paragraph{Reviewer: ``The proxy is too stylized.''}
+Correct again. The proxy isolates the mechanism. It should be followed by hardware and high-fidelity contact simulation. The contribution is a falsifiable representation and policy-selection idea, not a finished manipulation stack.
+
+\section*{Appendix AE: Falsifiable Predictions}
+
+The paper makes several predictions that can be tested outside this simulator. First, in tasks where two IK branches realize the same object velocity with opposite joint signs, the branch that uses stronger signed authority should have lower tracking error and fewer saturation events. Second, symmetric derating should be safe but unnecessarily conservative when a desired motion uses only a strong direction. Third, wrong weak-sign estimates should produce systematic branch mistakes rather than random degradation. Fourth, signed margin should predict future tracking failure better than unsigned joint-speed norm in high-asymmetry regimes.
+
+These predictions are stronger than the current empirical claim because they can be tested on hardware logs. A failure of all four predictions would weaken the signed-cone mechanism. A mixed result would be more informative: perhaps signed margin matters for cable-driven arms but not for direct-drive manipulators, or for pushing but not for free-space reaching. The paper is useful only if it guides those distinctions.
+
+\section*{Appendix AF: Camera-Ready Work Items}
+
+If this mechanism were promoted from synthetic paper to camera-ready hardware work, the first work item would be a real actuator identification protocol. The second would be a contact-rich task suite where primitive alternatives are meaningful. The third would be a constrained MPC baseline with the same signed bounds. The fourth would be a learned branch selector trained with and without signed features. The fifth would be a safety analysis of what the robot does when signed confidence falls during execution.
+
+The current artifact deliberately stops before those claims. It is a final batch paper under the requested full-scale synthetic standard, but it should still be described as a mechanism paper. That distinction is not modesty theater; it prevents the wrong deployment lesson. Signed cones should make policies more inspectable and better calibrated to hardware limits, not encourage unvalidated confident action.
+
+\section*{Appendix AG: Interpretation Pitfalls}
+
+The first interpretation pitfall is treating aggregate success as the only result. Family A aggregate success is useful, but it mixes low-ratio tasks, high-ratio tasks, easy low-branch-contrast tasks, and hard corner approaches. The mechanism is not equally active in all of those conditions. The ratio and task-family ledgers are therefore part of the result, not optional appendix decoration. A reviewer should read the aggregate together with the high-ratio separation and the no-contrast boundary.
+
+The second pitfall is treating true-cone SCMP as a deployable policy. It is a mechanism reference. Real robots do not receive perfect signed profiles for free. The estimated, guarded, robust, and wrong-sign results are closer to deployment risk. The paper's strongest deployment lesson is actually conservative: when sign direction is uncertain, do not trust a confident signed-cone choice.
+
+The third pitfall is treating symmetric derating as a strawman. Symmetric derating is a natural safety response to asymmetric authority. It is supposed to be conservative. The point is not that it is foolish, but that it can be too conservative when a task needs only the strong direction. In some easy cases it is near ceiling. In high-ratio and deadband-like cases it can collapse. This is a nuanced baseline, not a caricature.
+
+The fourth pitfall is treating one-step oracle as a global optimum. The oracle in the suite chooses the local branch with true one-step tracking information. It does not optimize a full trajectory, does not include a rich contact model, and does not plan over future state uncertainty. It is useful for checking whether local branch information is enough; it is not a substitute for constrained MPC.
+
+\section*{Appendix AH: Deployment Decision Tree}
+
+A practical signed-cone deployment can be summarized as a decision tree. First ask whether actuator asymmetry is persistent and measurable. If positive and negative authority are effectively symmetric, use ordinary constrained control and do not add signed-cone complexity. Second ask whether candidate primitives produce different signed actuator demands. If all candidate primitives use the same signs, SCMP has little to exploit. Third ask whether the signed profile is calibrated with the correct weak directions. If sign confidence is low, use guarded fallback or collect calibration data. Fourth ask whether the task consequence justifies branch switching. If switching contacts or IK branches is expensive, margin and switching penalties should dominate the score.
+
+During execution, the tree should be revisited. If tracking residuals repeatedly align with one command sign, the signed profile may have drifted. If temperature or current rises, authority may be decreasing. If contact changes, the primitive map $B_p$ may no longer be valid. In all three cases, the policy should lower confidence rather than continue selecting branches from stale signed authority.
+
+This decision tree is intentionally simple. It is not a replacement for safety certification. Its value is that it prevents the most common misuse of the method: applying SCMP just because a signed-cone model exists. The model must be relevant, calibrated, and connected to primitive alternatives.
+
+\section*{Appendix AI: Dataset Card For The Synthetic Suite}
+
+\paragraph{Purpose.}
+The suite tests whether signed actuator authority should enter manipulation primitive selection. It is designed for mechanism analysis, not for training general-purpose robot policies.
+
+\paragraph{Composition.}
+The final dataset contains 69,480 policy rows over 6,690 task cases. Rows are organized into seven families: ratio/task sweep, asymmetry-source sweep, calibration budget and bias, drift, noise, ablations, and negative controls. Each row contains method, condition, signed profile fields, seed, final error, success, tracking error, saturation count, effort, signed margin, branch switches, and related metadata.
+
+\paragraph{Collection process.}
+Rows are generated by a deterministic two-link planar simulator using seed 23023. Task cases are sampled from reachable start/goal pairs, sometimes requiring branch contrast. Policies are evaluated sequentially, and summaries are produced after each family. No human subjects or real robot logs are included.
+
+\paragraph{Recommended uses.}
+The dataset is suitable for reproducing the manuscript tables, checking signed-cone mechanism claims, testing alternate lightweight branch-selection policies, and auditing failure cases. It is not suitable for claiming real-world manipulation performance or benchmarking high-dimensional contact planning.
+
+\paragraph{Known biases.}
+The simulator favors local velocity tracking tasks and two-branch IK choices. It does not include tactile sensing, object shape diversity, compliance, full torque dynamics, perception failure, or multi-contact discontinuities. The task generator intentionally creates branch contrast in several families, which makes the signed-cone mechanism testable but not representative of all manipulation.
+
+\section*{Appendix AJ: Final Verification Procedure}
+
+The final verification procedure has three parts. The build check compiles the LaTeX source with \texttt{pdflatex}, \texttt{bibtex}, and repeated \texttt{pdflatex} passes until citations and references settle. The content check extracts text from the PDF and searches for the v3 marker, 69,480 rows, 6,690 cases, the headline numbers 0.940, 0.939, 0.891, 0.785, 0.771, the wrong-sign value 0.150, and the no-real-robot limitation. The artifact check confirms that the final PDF in Downloads is at least 25 pages, records byte size and SHA256, and removes the local build PDF.
+
+The repository check then verifies that source, results, figures, tables, execution plan, evidence summary, experiment report, final audit, and reproducibility notes are committed. The final git check must show a clean branch and equality between local HEAD and upstream before moving to Paper 24. These checks are deliberately mechanical because the failure mode being avoided is also mechanical: a PDF can exist and still not be final.
+
+\section*{Appendix AK: Safety Cases}
+
+\paragraph{Case 1: strong push, weak retract.}
+Suppose a mobile manipulator pushes a cart or drawer where one joint can extend strongly but retract weakly due to cable routing or brake friction. A nominal branch selector may choose a configuration that requires the weak retract direction to stabilize contact. SCMP would prefer a branch that maps the same object motion into the strong extension direction, if such a branch exists. The safety benefit is fewer near-limit commands and less chance of losing contact under load.
+
+\paragraph{Case 2: asymmetric gripper approach.}
+Consider a gripper with one approach side that requires lifting against gravity and another that requires lowering with controlled braking. If braking authority is weak, the geometrically shorter approach may be mechanically worse. A signed-cone policy can expose that the shorter path spends margin in the weak direction. The robot can then choose the longer but safer approach or ask for regrasping.
+
+\paragraph{Case 3: thermal degradation during repeated manipulation.}
+After repeated motions, positive velocity authority in one joint may degrade faster than negative authority. A fixed SCMP calibrated at the beginning of the run may become stale. The drift family approximates this risk. A hardware system should reduce signed confidence as residuals grow and should switch to guarded fallback when the profile no longer matches observed motion.
+
+\paragraph{Case 4: maintenance or replacement changes sign profile.}
+After actuator service, a sign convention or controller gain can change. Wrong-sign calibration then becomes possible. Family G shows this is dangerous. A post-maintenance robot should re-run sign validation rather than trusting old calibration files. A quick positive/negative authority check is cheap compared with executing a contact-rich task with a reversed weak-sign assumption.
+
+\section*{Appendix AL: Additional Result Interpretation}
+
+The full-scale suite contains a few results that are easy to misread. One is that robust SCMP can outperform true-cone SCMP in some drift or calibration aggregates. This does not mean a conservative wrong model is better in general. It means that the true-cone policy and robust policy optimize slightly different local scores under finite sampled tasks. Robust SCMP can avoid brittle high-authority actions and thereby improve success in a small proxy. On hardware, that tradeoff should be tuned by task cost.
+
+Another subtle result is that saturations are often zero in the main aggregate. This occurs because the policies frequently clip or project commands before execution, so failure appears as tracking error and final object error rather than as a recorded post-command saturation event. In drift families, saturation counts become more informative because the true profile changes after planning. A future simulator should separate pre-command projection, low-level clipping, current saturation, and safety stop events.
+
+The wrong-sign and shared-weak-sign controls are the clearest tests of causal specificity. In wrong-sign calibration, the signed estimate is actively misleading. In shared weak-positive controls, the primitive alternatives are less able to escape weak directions. These controls answer different reviewer attacks. Wrong sign says calibration matters. Shared weak sign says primitive diversity matters. No branch contrast says the signed-cone mechanism cannot help if the policy has no useful action alternative.
+
+Finally, the result that random branch can be strong in some controls should not be hidden. Randomness sometimes prevents systematic wrong choices. This is not a recommendation to use random branch policies; it is a warning that structured policies can fail systematically when their structure is wrong. A robust robot should detect that situation and fall back to conservative or information-gathering behavior.
+
+\section*{Appendix AM: Acceptance Boundaries}
+
+The paper should be accepted or rejected on the signed-policy-interface claim, not on claims it does not make. A fair positive reading is: if actuator authority is direction-dependent and candidate primitives induce different signed actuator demands, then exposing signed authority before primitive choice can improve manipulation robustness. The full-scale synthetic evidence supports that statement across high-ratio and branch-contrast regimes.
+
+A fair negative reading is also clear: if signed authority is not calibrated, if sign direction is wrong, if primitive alternatives do not change signed demands, or if a stronger constrained planner already optimizes over the full signed model, then SCMP may add little or fail badly. The final manuscript includes these boundaries because a mechanism paper is stronger when it states how to falsify itself.
+
+The most important practical boundary is confidence. A robot should not treat signed-cone scores as ordinary costs when the cone estimate is uncertain. The score should carry a confidence flag that can trigger fallback, extra calibration, or human review. This is the lesson from wrong-sign calibration and from the guarded policy experiments.
+
+The most important scientific boundary is external validity. The planar proxy makes the mechanism legible, but it is not a substitute for contact-rich hardware. A real acceptance case would require actuator logs, primitive maps, contact outcomes, and comparison against learned policies and MPC. The current artifact is final for the requested synthetic full-scale batch; it is not the last word on signed-actuator manipulation.
+
+\section*{Appendix AN: Minimal Hardware Checklist}
+
+A minimal hardware replication would need only a few ingredients. First, choose a manipulator where one joint or gripper axis has measurable directional asymmetry. Second, define at least two primitives that can accomplish the same local object motion with different actuator signs. Third, measure the positive and negative authority of the relevant actuators before the task. Fourth, run nominal branch selection, mean-gain compensation, symmetric derating, signed fixed branch, and SCMP on matched task starts. Fifth, repeat after deliberately biasing the signed profile estimate, including a wrong-sign condition if it can be done safely in simulation or with low-force limits.
+
+The expected positive outcome is not perfect task success. The expected pattern is more specific: SCMP should choose primitives with larger signed margin, reduce weak-direction tracking error, and avoid some derating failures. The expected negative outcome is also specific: if the signed profile is wrong, SCMP should degrade systematically. Reporting both outcomes would be stronger than reporting only task completion because it would test the mechanism rather than merely the controller stack.
+
+The hardware checklist also clarifies what data must be saved. Each trial should include the chosen primitive, commanded signs, measured signs, signed margin, whether a limit or safety stop was reached, final object error, and whether a fallback was triggered. Without those fields, a failure cannot be assigned to the signed-cone mechanism, the actuator estimate, the contact model, or the high-level task sampler.
 
 \end{document}
