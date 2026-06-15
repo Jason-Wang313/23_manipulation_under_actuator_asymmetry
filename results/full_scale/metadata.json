@@ -1,0 +1,90 @@
+{
+  "stage": "complete",
+  "seed": 23023,
+  "elapsed_seconds": 2020.951606800023,
+  "total_rows": 69480,
+  "total_cases": 6690,
+  "plot_failures": 0,
+  "families": [
+    {
+      "family": "family_a",
+      "rows": 40320,
+      "cases": 3360,
+      "seconds": 1111.610779599985
+    },
+    {
+      "family": "family_b",
+      "rows": 7560,
+      "cases": 630,
+      "seconds": 223.24920249998104
+    },
+    {
+      "family": "family_c",
+      "rows": 12800,
+      "cases": 1600,
+      "seconds": 413.84928480000235
+    },
+    {
+      "family": "family_d",
+      "rows": 2400,
+      "cases": 300,
+      "seconds": 72.99747159995604
+    },
+    {
+      "family": "family_e",
+      "rows": 2400,
+      "cases": 300,
+      "seconds": 65.55276410002261
+    },
+    {
+      "family": "family_f",
+      "rows": 1120,
+      "cases": 140,
+      "seconds": 29.15251129999524
+    },
+    {
+      "family": "family_g",
+      "rows": 2880,
+      "cases": 360,
+      "seconds": 88.8965492999996
+    }
+  ],
+  "outputs": [
+    "results\\full_scale\\claim_evidence.csv",
+    "results\\full_scale\\family_a_rows.csv",
+    "results\\full_scale\\family_a_summary_by_method.csv",
+    "results\\full_scale\\family_a_summary_by_ratio.csv",
+    "results\\full_scale\\family_a_summary_by_task.csv",
+    "results\\full_scale\\family_b_rows.csv",
+    "results\\full_scale\\family_b_summary_by_method.csv",
+    "results\\full_scale\\family_b_summary_by_profile.csv",
+    "results\\full_scale\\family_c_rows.csv",
+    "results\\full_scale\\family_c_summary_by_bias.csv",
+    "results\\full_scale\\family_c_summary_by_budget.csv",
+    "results\\full_scale\\family_d_rows.csv",
+    "results\\full_scale\\family_d_summary_by_drift.csv",
+    "results\\full_scale\\family_e_rows.csv",
+    "results\\full_scale\\family_e_summary_by_noise.csv",
+    "results\\full_scale\\family_f_rows.csv",
+    "results\\full_scale\\family_f_summary_by_ablation.csv",
+    "results\\full_scale\\family_g_rows.csv",
+    "results\\full_scale\\family_g_summary_by_control.csv",
+    "results\\full_scale\\progress.json",
+    "results\\full_scale\\tex\\table_ablations.tex",
+    "results\\full_scale\\tex\\table_asymmetry_sources.tex",
+    "results\\full_scale\\tex\\table_calibration_budget.tex",
+    "results\\full_scale\\tex\\table_claim_evidence.tex",
+    "results\\full_scale\\tex\\table_drift.tex",
+    "results\\full_scale\\tex\\table_main_full_scale.tex",
+    "results\\full_scale\\tex\\table_negative_controls.tex",
+    "results\\full_scale\\tex\\table_noise.tex",
+    "figures\\full_scale\\calibration_budget.pdf",
+    "figures\\full_scale\\calibration_budget.png",
+    "figures\\full_scale\\drift_success.pdf",
+    "figures\\full_scale\\drift_success.png",
+    "figures\\full_scale\\main_success_by_ratio.pdf",
+    "figures\\full_scale\\main_success_by_ratio.png",
+    "figures\\full_scale\\negative_controls.pdf",
+    "figures\\full_scale\\negative_controls.png"
+  ]
+}

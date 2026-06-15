@@ -1,70 +1,29 @@
 # Child Status
 
-Stage: v2 submission hardening complete
+Stage: v3 final full-scale complete
 
 Current facts:
-- Wrote `plan.md`.
-- Existing retry artifacts were reused.
-- Added `scripts/validate_artifacts.py` and fixed its tier counters.
-- Online check found current ICLR 2026 template sources using `iclr2026_conference.sty`, `iclr2026_conference.bst`, and `iclr2026_conference.tex`.
-- `scripts/collect_literature.py` rerun ended with PowerShell-reported exit `-1`, but the current matrix validates at 1000 rows and the collector rewrote usable output.
-- `scripts/synthesize_literature.py` completed from 1000 rows.
-- `scripts/run_experiments.py` completed with 4800 episode rows.
-- Template refresh and paper regeneration completed.
-- Initial build failures were script bugs, not LaTeX content failures:
-  - Fixed `$Name:` parsing by using `${Name}:`.
-  - Renamed `Run-Step` parameter from `$Args` to `$StepArgs`.
-  - Captured LaTeX output so `Run-Step` returns only numeric exit code.
-- Final LaTeX build completed: pdflatex, bibtex, pdflatex, pdflatex all exited `0`.
-- Final PDF copied to `C:/Users/wangz/Downloads/23.pdf`.
-- Created public GitHub repo `https://github.com/Jason-Wang313/23_manipulation_under_actuator_asymmetry`.
-- Pushed initial commit `a85aed6` to `origin/master`.
-- Added `docs/github_status.md` and regenerated `docs/final_audit.md` with the GitHub URL.
-- Pushed final audit/status commit `7d24ef3` to `origin/master`.
-- V2 hardening added calibration-error stress. With true ratio 4.0, SCMP reaches 0.863 success when calibrated correctly and falls to 0.281 when the policy assumes symmetry.
-- Updated `scripts/write_paper.py`, `scripts/write_final_audit.py`, and `scripts/validate_artifacts.py` so v2 results survive regeneration.
+- V1/V2 repository was already published at `https://github.com/Jason-Wang313/23_manipulation_under_actuator_asymmetry`.
+- V2 added calibration-error stress: true ratio 4.0, SCMP 0.863 success with correct calibration and 0.281 when assuming symmetry.
+- V3 full-scale plan was written first in `docs/full_scale_execution_plan.md`.
+- V3 full-scale runner `experiments/full_scale_signed_cone.py` completed with seed 23023.
+- V3 suite produced 69,480 policy rows over 6,690 task cases with zero plot failures.
+- Family coverage: ratio/task sweep, asymmetry-source sweep, calibration budget and bias, drift, noise, ablations, and negative controls.
+- Final manuscript source is `paper/main.tex` and contains the marker `v3 final full-scale`.
+- Final LaTeX build completed with pdflatex, bibtex, pdflatex, pdflatex all exiting 0.
+- Final PDF was exported to `C:/Users/wangz/Downloads/23.pdf`.
+- Verified final PDF: 25 pages, 360,190 bytes, SHA256 `84342525B234DFCBF4F1D23DD11349BDF2D179953A42A0110D60078403247519`.
+- Final PDF text check found the v3 marker, 69,480 rows, 6,690 cases, headline success values, wrong-sign calibration failure, no-real-robot limitation, and final audit marker.
+- Local `paper/main.pdf` was removed after export.
 
-Commands run:
-- `apply_patch` add `plan.md`
-- `apply_patch` add/update `child_status.md`
-- `Get-Location; Get-ChildItem -Force | Select-Object Mode,Length,LastWriteTime,Name`
-- `git status --short`
-- `rg --files`
-- `Get-Content` inspections for literature, experiment, paper, build, audit, and README scripts
-- Web search for current official ICLR template
-- `apply_patch` add/update `scripts/validate_artifacts.py`
-- `python scripts/collect_literature.py` wrapped; reported `collect_literature_exit=-1`
-- `python scripts/validate_artifacts.py`
-- `python scripts/synthesize_literature.py`; exit `0`
-- `python scripts/run_experiments.py`; exit `0`
-- `python scripts/fetch_iclr_template.py`; exit `0`
-- `python scripts/write_paper.py`; exit `0`
-- `powershell -ExecutionPolicy Bypass -File scripts/build_paper.ps1`; first attempts exposed script bugs, final run exit `0`
-- `python scripts/write_final_audit.py`; exit `0`
-- `gh repo create 23_manipulation_under_actuator_asymmetry --public --source . --remote origin --description "..."`
-- `git push -u origin master`; exit `0`
-- `git commit -m "Record published audit status"`; exit `0`
-- `git push`; exit `0`
+Key v3 results:
+- Family A aggregate: SCMP true-cone 0.940 success, guarded SCMP 0.939, signed fixed branch 0.891, symmetric derating 0.785, nominal branch 0.771.
+- High asymmetry remains the core positive result: at ratio 5.0, guarded SCMP reaches 0.854 and true-cone SCMP 0.838, versus symmetric derating 0.298 and nominal branch 0.442.
+- Calibration is a real boundary: wrong-sign calibration drives estimated SCMP to 0.150 and guarded SCMP to 0.200 while true-cone SCMP reaches 0.933.
+- Negative controls are explicit: gains disappear or become irrelevant under symmetric actuation, no branch contrast, and misestimated sign profiles.
 
-Failures:
-- Literature refresh reported exit `-1` after several minutes without a normal completion message.
-- First build attempt failed on PowerShell variable interpolation (`$Name:`).
-- Second build attempt launched `pdflatex` without arguments due `$Args` collision.
-- Third build attempt produced `main.pdf` but skipped BibTeX/copy because function output polluted the return code.
-
-Recovery steps:
-- Validated `docs/related_work_matrix.csv`: 1000 rows, required columns, 300 serious skim, 240 deep read, and 100 hostile ranks.
-- Regenerated synthesis docs from the valid matrix.
-- Patched `scripts/build_paper.ps1` and reran until all passes completed.
-- Published repository, regenerated final audit with URL, and pushed final metadata commit.
-
-Exit code: 0
-End time: 2026-06-11 19:00:01 +01:00
-PDF exists: True
-
-## V2 Hardening Complete
-
-- Rebuilt paper with the calibration-stress table.
-- Copied `C:/Users/wangz/Downloads/23.pdf`.
-- Removed local `paper/main.pdf`.
-- Prepared v2 commit and push.
+Remaining limitations:
+- No real robot or high-fidelity contact simulation.
+- No full constrained-MPC/control-allocation baseline with identical signed bounds.
+- Calibration, sign conventions, and actuator drift remain deployment-critical.
+- The paper should be read as a full-scale synthetic mechanism paper, not a hardware performance claim.

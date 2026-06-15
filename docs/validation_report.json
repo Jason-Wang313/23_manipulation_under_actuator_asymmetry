@@ -1,77 +1,106 @@
 {
-  "matrix": {
+  "stage": "v3 final full-scale complete",
+  "literature_matrix": {
     "rows": 1000,
     "serious": 300,
     "deep": 240,
-    "hostile": 100,
-    "columns": [
-      "rank",
-      "sweep_stage",
-      "hostile_rank",
-      "title",
-      "year",
-      "venue",
-      "authors",
-      "doi",
-      "url",
-      "openalex_id",
-      "cited_by_count",
-      "query",
-      "relevance_score",
-      "problem_claimed",
-      "actual_mechanism",
-      "hidden_assumptions",
-      "variables_treated_as_fixed",
-      "failure_modes_ignored",
-      "what_it_makes_less_novel",
-      "what_it_leaves_open",
-      "abstract_excerpt"
-    ]
+    "hostile": 100
   },
-  "experiments": {
+  "legacy_v2_experiments": {
     "episodes": 4800,
-    "rows": 30,
+    "summary_rows": 30,
     "ratio4_scmp_success": 0.90625,
     "calibration_stress_rows": 30,
     "calibration_ratio1_scmp_success": 0.28125,
     "calibration_stress_table_exists": true,
     "calibration_stress_plot_exists": true
   },
-  "docs": {
-    "related_work_matrix.csv": {
-      "exists": true,
-      "bytes": 1507611
+  "full_scale_v3": {
+    "runner": "experiments/full_scale_signed_cone.py",
+    "seed": 23023,
+    "policy_rows": 69480,
+    "task_cases": 6690,
+    "plot_failures": 0,
+    "family_rows": {
+      "A_ratio_task": 40320,
+      "B_asymmetry_source": 7560,
+      "C_calibration": 12800,
+      "D_drift": 2400,
+      "E_noise": 2400,
+      "F_ablations": 1120,
+      "G_negative_controls": 2880
     },
-    "literature_map.md": {
-      "exists": true,
-      "bytes": 51885
-    },
-    "hostile_prior_work.md": {
-      "exists": true,
-      "bytes": 101887
-    },
-    "novelty_boundary_map.md": {
-      "exists": true,
-      "bytes": 12891
-    },
-    "novelty_decision.md": {
-      "exists": true,
-      "bytes": 2310
-    },
-    "claims.md": {
-      "exists": true,
-      "bytes": 1853
-    },
-    "reviewer_attacks.md": {
-      "exists": true,
-      "bytes": 1975
-    },
-    "final_audit.md": {
-      "exists": true,
-      "bytes": 3554
+    "headline_success": {
+      "family_a_scmp_true": 0.940,
+      "family_a_guarded_scmp": 0.939,
+      "family_a_signed_fixed": 0.891,
+      "family_a_symmetric_derating": 0.785,
+      "family_a_nominal_branch": 0.771,
+      "family_g_wrong_sign_estimated_scmp": 0.150,
+      "family_g_wrong_sign_guarded_scmp": 0.200,
+      "family_g_wrong_sign_true_scmp": 0.933
     }
   },
-  "paper_main_exists": true,
-  "paper_pdf_exists": false,
-  "downloads_pdf_exists": true
+  "final_pdf": {
+    "path": "C:/Users/wangz/Downloads/23.pdf",
+    "exists": true,
+    "pages": 25,
+    "bytes": 360190,
+    "sha256": "84342525B234DFCBF4F1D23DD11349BDF2D179953A42A0110D60078403247519",
+    "text_markers_verified": [
+      "v3 final full-scale",
+      "69,480",
+      "6,690",
+      "0.940",
+      "0.939",
+      "0.891",
+      "0.785",
+      "0.771",
+      "0.150",
+      "wrong-sign",
+      "no real robot",
+      "Final Audit"
+    ]
+  },
+  "files": {
+    "README.md": {
+      "exists": true,
+      "bytes": 3110
+    },
+    "child_status.md": {
+      "exists": true,
+      "bytes": 2291
+    },
+    "docs/claims.md": {
+      "exists": true,
+      "bytes": 2596
+    },
+    "docs/evidence_summary.md": {
+      "exists": true,
+      "bytes": 1757
+    },
+    "docs/experiment_report.md": {
+      "exists": true,
+      "bytes": 2866
+    },
+    "docs/final_audit.md": {
+      "exists": true,
+      "bytes": 4292
+    },
+    "paper/main.tex": {
+      "exists": true,
+      "bytes": 71991
+    },
+    "paper/main.pdf": {
+      "exists": false
+    },
+    "experiments/full_scale_signed_cone.py": {
+      "exists": true,
+      "bytes": 43815
+    },
+    "results/full_scale/metadata.json": {
+      "exists": true,
+      "bytes": 3006
+    }
+  }
 }

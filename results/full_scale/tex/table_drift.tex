@@ -1,0 +1,37 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Family D drift and online-identification stress.}
+\label{tab:drift}
+\begin{tabular}{lcccc}
+\toprule
+Drift & Method & Success & Satur. & Error \\
+\midrule
+none & adaptive\_scmp & 0.883 & 0.000 & 0.065 \\
+none & guarded\_scmp & 0.900 & 0.000 & 0.054 \\
+none & robust\_scmp & 0.933 & 0.000 & 0.053 \\
+none & scmp\_estimated & 0.917 & 0.000 & 0.056 \\
+none & scmp\_true & 0.883 & 0.000 & 0.057 \\
+sign\_flip & adaptive\_scmp & 0.950 & 0.000 & 0.052 \\
+sign\_flip & guarded\_scmp & 0.900 & 0.000 & 0.052 \\
+sign\_flip & robust\_scmp & 0.917 & 0.000 & 0.065 \\
+sign\_flip & scmp\_estimated & 0.917 & 0.000 & 0.053 \\
+sign\_flip & scmp\_true & 0.833 & 0.000 & 0.071 \\
+slow\_loss & adaptive\_scmp & 0.933 & 2.033 & 0.053 \\
+slow\_loss & guarded\_scmp & 0.983 & 0.300 & 0.042 \\
+slow\_loss & robust\_scmp & 0.983 & 0.083 & 0.043 \\
+slow\_loss & scmp\_estimated & 0.983 & 0.617 & 0.044 \\
+slow\_loss & scmp\_true & 0.933 & 0.000 & 0.048 \\
+sudden\_fault & adaptive\_scmp & 0.967 & 2.017 & 0.045 \\
+sudden\_fault & guarded\_scmp & 0.967 & 2.267 & 0.045 \\
+sudden\_fault & robust\_scmp & 0.933 & 3.800 & 0.063 \\
+sudden\_fault & scmp\_estimated & 0.983 & 3.200 & 0.043 \\
+sudden\_fault & scmp\_true & 0.950 & 0.000 & 0.055 \\
+thermal\_recovery & adaptive\_scmp & 0.967 & 6.967 & 0.047 \\
+thermal\_recovery & guarded\_scmp & 0.917 & 7.417 & 0.056 \\
+thermal\_recovery & robust\_scmp & 0.967 & 1.867 & 0.047 \\
+thermal\_recovery & scmp\_estimated & 0.883 & 8.033 & 0.054 \\
+thermal\_recovery & scmp\_true & 0.950 & 0.000 & 0.044 \\
+\bottomrule
+\end{tabular}
+\end{table}
