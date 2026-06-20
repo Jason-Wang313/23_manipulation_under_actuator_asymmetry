@@ -1,4 +1,5 @@
-Build started at 2026-06-13T03:25:47.4866866+01:00
+Build completed at 2026-06-15T02:31:00+01:00
+VLA link-box hardening rebuild completed on 2026-06-20.
 RUN pdflatex1: pdflatex -interaction=nonstopmode -halt-on-error main.tex
 EXIT pdflatex1: 0
 RUN bibtex: bibtex main
@@ -8,4 +9,8 @@ EXIT pdflatex2: 0
 RUN pdflatex3: pdflatex -interaction=nonstopmode -halt-on-error main.tex
 EXIT pdflatex3: 0
 PDF copied to C:\Users\wangz\Downloads\23.pdf
-Build finished at 2026-06-13T03:26:09.8095065+01:00
+PDF pages: 25
+PDF bytes: 360190
+PDF SHA256: 2605F94DB0B455CB5FCADB8887871887C8997C798EC2E90A7E73E3633082311B
+LINK_BOXES green=53 red=3 cyan=0 borders=0_0_1 annotations=56
+Local paper/main.pdf removed after canonical copy

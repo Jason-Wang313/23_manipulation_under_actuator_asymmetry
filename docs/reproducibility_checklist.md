@@ -9,9 +9,11 @@
 - [x] Generated V3 TeX tables are under `results/full_scale/tex/`.
 - [x] Paper source is `paper/main.tex`.
 - [x] Canonical batch PDF path is `C:/Users/wangz/Downloads/23.pdf`.
-- [x] Canonical PDF is verified at 25 pages, 360,190 bytes, SHA256 `84342525B234DFCBF4F1D23DD11349BDF2D179953A42A0110D60078403247519`.
+- [x] Canonical PDF is verified at 25 pages, 360,190 bytes, SHA256 `2605F94DB0B455CB5FCADB8887871887C8997C798EC2E90A7E73E3633082311B`.
 - [x] Local `paper/main.pdf` is deleted after copying the canonical PDF to Downloads.
 - [x] The full-scale runner compiles with `python -m py_compile`.
+- [x] VLA-style link boxes verified with pypdf inventory and rendered-page
+  visual inspection.
 
 Recommended verification commands:
 

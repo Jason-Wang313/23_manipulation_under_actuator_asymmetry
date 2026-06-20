@@ -24,13 +24,17 @@
 
 12. Exact Downloads PDF path: `C:/Users/wangz/Downloads/23.pdf`.
 
-13. Downloads PDF verification: 25 pages, 360,190 bytes, SHA256 `84342525B234DFCBF4F1D23DD11349BDF2D179953A42A0110D60078403247519`.
+13. Downloads PDF verification: 25 pages, 360,190 bytes, SHA256 `2605F94DB0B455CB5FCADB8887871887C8997C798EC2E90A7E73E3633082311B`.
 
 14. GitHub URL/status: `https://github.com/Jason-Wang313/23_manipulation_under_actuator_asymmetry`.
 
 15. Visible Desktop PDF copy status: absent; canonical batch artifact is in Downloads.
 
 16. Local build PDF status: `paper/main.pdf` is absent after canonical copy.
+
+17. VLA-style link-box audit: all 56 link annotations use one-point borders;
+    citation and URL boxes are green, internal-reference boxes are red, no cyan
+    boxes are present, and rendered affected pages were visually inspected.
 
 ## Final Build And Verification
 
@@ -40,6 +44,6 @@ bibtex main -> 0
 pdflatex -interaction=nonstopmode -halt-on-error main.tex -> 0
 pdflatex -interaction=nonstopmode -halt-on-error main.tex -> 0
 pdfinfo C:/Users/wangz/Downloads/23.pdf -> 25 pages
-Get-FileHash -Algorithm SHA256 C:/Users/wangz/Downloads/23.pdf -> 84342525B234DFCBF4F1D23DD11349BDF2D179953A42A0110D60078403247519
+Get-FileHash -Algorithm SHA256 C:/Users/wangz/Downloads/23.pdf -> 2605F94DB0B455CB5FCADB8887871887C8997C798EC2E90A7E73E3633082311B
 pdftotext marker check -> v3 marker, row/case counts, headline metrics, wrong-sign failure, no-real-robot limitation, and final audit marker found
 ```

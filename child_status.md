@@ -1,6 +1,7 @@
 # Child Status
 
-Stage: v3 final full-scale complete
+Stage: v3 final full-scale complete; VLA link-box hardening exported and
+verified.
 
 Current facts:
 - V1/V2 repository was already published at `https://github.com/Jason-Wang313/23_manipulation_under_actuator_asymmetry`.
@@ -12,7 +13,9 @@ Current facts:
 - Final manuscript source is `paper/main.tex` and contains the marker `v3 final full-scale`.
 - Final LaTeX build completed with pdflatex, bibtex, pdflatex, pdflatex all exiting 0.
 - Final PDF was exported to `C:/Users/wangz/Downloads/23.pdf`.
-- Verified final PDF: 25 pages, 360,190 bytes, SHA256 `84342525B234DFCBF4F1D23DD11349BDF2D179953A42A0110D60078403247519`.
+- Verified final PDF: 25 pages, 360,190 bytes, SHA256 `2605F94DB0B455CB5FCADB8887871887C8997C798EC2E90A7E73E3633082311B`.
+- Final PDF link boxes: green citation/URL boxes = 53, red internal references
+  = 3, cyan = 0, with one-point borders on all 56 link annotations.
 - Final PDF text check found the v3 marker, 69,480 rows, 6,690 cases, headline success values, wrong-sign calibration failure, no-real-robot limitation, and final audit marker.
 - Local `paper/main.pdf` was removed after export.
 

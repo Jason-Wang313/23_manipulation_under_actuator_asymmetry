@@ -39,4 +39,4 @@ Negative controls prevent overclaiming. With symmetric actuation or no branch co
 
 ## Final Artifact
 
-The final PDF exported to `C:/Users/wangz/Downloads/23.pdf` is 25 pages, 360,190 bytes, SHA256 `84342525B234DFCBF4F1D23DD11349BDF2D179953A42A0110D60078403247519`. Text extraction confirms the v3 marker, row/case counts, headline results, wrong-sign failure, no-real-robot limitation, and final audit marker.
+The final PDF exported to `C:/Users/wangz/Downloads/23.pdf` is 25 pages, 360,190 bytes, SHA256 `2605F94DB0B455CB5FCADB8887871887C8997C798EC2E90A7E73E3633082311B`. Text extraction confirms the v3 marker, row/case counts, headline results, wrong-sign failure, no-real-robot limitation, and final audit marker. The VLA-style link-box audit has 53 green citation/URL boxes, 3 red internal-reference boxes, no cyan boxes, and one-point borders on all 56 link annotations.

@@ -5,7 +5,9 @@ Decision: ready as a final full-scale synthetic mechanism paper under the stated
 ## Why It Is Ready For The Batch Standard
 
 - The final manuscript is 25 pages and exported to `C:/Users/wangz/Downloads/23.pdf`.
-- The final PDF is verified: 25 pages, 360,190 bytes, SHA256 `84342525B234DFCBF4F1D23DD11349BDF2D179953A42A0110D60078403247519`.
+- The final PDF is verified: 25 pages, 360,190 bytes, SHA256 `2605F94DB0B455CB5FCADB8887871887C8997C798EC2E90A7E73E3633082311B`.
+- VLA-style link boxes are verified: green citations/URLs, red internal
+  references, no cyan boxes, one-point borders.
 - The v3 suite contains 69,480 policy rows over 6,690 task cases with zero plot failures.
 - The paper includes ratio/task, asymmetry-source, calibration, drift, noise, ablation, and negative-control families.
 - The manuscript includes positive findings and failure cases rather than padding.

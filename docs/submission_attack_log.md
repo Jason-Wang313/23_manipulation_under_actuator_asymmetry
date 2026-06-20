@@ -1,6 +1,6 @@
 # Submission Attack Log
 
-Updated: 2026-06-15 02:31 +01:00
+Updated: 2026-06-20
 
 ## V3 Attack Rounds
 
@@ -12,6 +12,10 @@ Updated: 2026-06-15 02:31 +01:00
 6. **"The result will vanish in irrelevant regimes."** Added negative controls for symmetric actuation, no branch contrast, shared weak signs, and wrong sign estimates.
 7. **"No hardware validation."** Still unresolved and stated clearly in the paper, audit, and reproducibility docs.
 8. **"Full constrained MPC remains a stronger baseline."** Still unresolved and listed as required next work.
+9. **"The PDF still has cyan URL boxes unlike the VLA role model."** Response:
+   added explicit VLA-style boxed-link policy, rebuilt the Downloads PDF,
+   converted URL boxes to green, inventoried all link annotations, and
+   inspected rendered affected pages.
 
 ## Terminal Assessment
 

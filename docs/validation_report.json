@@ -46,7 +46,20 @@
     "exists": true,
     "pages": 25,
     "bytes": 360190,
-    "sha256": "84342525B234DFCBF4F1D23DD11349BDF2D179953A42A0110D60078403247519",
+    "sha256": "2605F94DB0B455CB5FCADB8887871887C8997C798EC2E90A7E73E3633082311B",
+    "link_box_visual_hardening": {
+      "date": "2026-06-20",
+      "role_model_pdf": "C:/Users/wangz/Downloads/certified-tailguard-vla-iclr-submission.pdf",
+      "link_pages": [[2, 31], [5, 1], [6, 1], [8, 1], [12, 9], [13, 13]],
+      "annotation_colors": {
+        "green": 53,
+        "red": 3,
+        "cyan": 0
+      },
+      "border_widths": ["0 0 1"],
+      "rendered_pages": [2, 5, 6, 8, 12, 13],
+      "visual_audit": "Rendered affected pages were inspected; green citation and URL boxes and red internal-reference boxes are crisp and aligned, and no cyan boxes are present."
+    },
     "text_markers_verified": [
       "v3 final full-scale",
       "69,480",
