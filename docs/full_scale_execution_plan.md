@@ -1,5 +1,16 @@
 # Paper 23 Full-Scale Execution Plan
 
+## 2026-06-20 Visual-Hardening Addendum
+
+The final v3 manuscript was rebuilt with the explicit VLA role-model hyperref
+policy for boxed links. The Downloads artifact remains 25 pages and is now:
+
+- Path: `C:/Users/wangz/Downloads/23.pdf`
+- Size: 360,190 bytes
+- SHA256: `2605F94DB0B455CB5FCADB8887871887C8997C798EC2E90A7E73E3633082311B`
+- Link-box inventory: green = 53, red = 3, cyan = 0, with one-point borders on
+  all 56 link annotations.
+
 ## Current Claim
 
 The current v2 paper argues that manipulation policies should expose signed actuator authority. When positive and negative actuator directions have different gains or limits, a manipulation policy should choose IK/contact primitives by feasibility inside signed actuator cones rather than by nominal object-space geometry or symmetric derating.

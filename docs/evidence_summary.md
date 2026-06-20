@@ -7,7 +7,9 @@
 - Plot failures: 0.
 - Runner: `experiments/full_scale_signed_cone.py`.
 - Final PDF: `C:/Users/wangz/Downloads/23.pdf`.
-- Final PDF verification: 25 pages, 360,190 bytes, SHA256 `84342525B234DFCBF4F1D23DD11349BDF2D179953A42A0110D60078403247519`.
+- Final PDF verification: 25 pages, 360,190 bytes, SHA256 `2605F94DB0B455CB5FCADB8887871887C8997C798EC2E90A7E73E3633082311B`.
+- Final PDF link boxes: green citation/URL boxes = 53, red internal references
+  = 3, cyan = 0, with one-point borders on all 56 link annotations.
 
 ## Headline Numbers
 
